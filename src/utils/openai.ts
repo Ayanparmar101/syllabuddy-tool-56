@@ -2,6 +2,11 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from "@/integrations/supabase/client";
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Set up the PDF.js worker
+const pdfjsWorker = `https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.js`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 export interface AnalyzedQuestion {
   id: string;
@@ -118,7 +123,50 @@ export const analyzeDocumentWithGPT = async (
 };
 
 /**
+ * Convert PDF page to image data URL
+ */
+const pdfPageToDataURL = async (pdfData: ArrayBuffer, pageNum: number = 1): Promise<string> => {
+  try {
+    // Load the PDF document
+    const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+    const pdf = await loadingTask.promise;
+    
+    // Get the requested page
+    const page = await pdf.getPage(pageNum);
+    
+    // Set the scale for rendering
+    const viewport = page.getViewport({ scale: 1.5 });
+    
+    // Create a canvas to render the page
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    
+    if (!context) {
+      throw new Error('Unable to create canvas context');
+    }
+    
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    
+    // Render the PDF page to the canvas
+    const renderContext = {
+      canvasContext: context,
+      viewport: viewport,
+    };
+    
+    await page.render(renderContext).promise;
+    
+    // Convert the canvas to a data URL (PNG format)
+    return canvas.toDataURL('image/png');
+  } catch (error) {
+    console.error('Error converting PDF page to image:', error);
+    throw new Error('Failed to convert PDF page to image');
+  }
+};
+
+/**
  * Analyze PDF document using OpenAI's GPT-4o Vision capabilities
+ * This function now converts the PDF to images before sending to OpenAI
  */
 export const analyzePDFWithGPTVision = async (
   file: File, 
@@ -130,11 +178,18 @@ export const analyzePDFWithGPTVision = async (
       throw new Error('Invalid API key format. OpenAI API keys should start with "sk-"');
     }
 
-    // For PDF files, convert to base64 and use vision capabilities
-    const base64Data = await fileToBase64(file);
-    
     console.log("Processing PDF document using GPT-4o vision capabilities");
     
+    // Read the PDF file as ArrayBuffer
+    const pdfArrayBuffer = await file.arrayBuffer();
+    
+    // Convert the first page of the PDF to an image
+    const pdfImageDataUrl = await pdfPageToDataURL(pdfArrayBuffer);
+    
+    // Extract the base64 data (remove the data:image/png;base64, prefix)
+    const base64Image = pdfImageDataUrl.split(',')[1];
+    
+    // Send the image to OpenAI
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -164,12 +219,12 @@ export const analyzePDFWithGPTVision = async (
             content: [
               {
                 type: 'text',
-                text: `Please analyze this PDF document and extract all questions, categorizing them by Bloom's Taxonomy levels.`
+                text: `Please analyze this PDF document image and extract all questions, categorizing them by Bloom's Taxonomy levels.`
               },
               {
                 type: 'image_url',
                 image_url: {
-                  url: `data:application/pdf;base64,${base64Data}`
+                  url: `data:image/png;base64,${base64Image}`
                 }
               }
             ]
@@ -269,6 +324,8 @@ export const analyzePDFWithGPTVision = async (
       errorMessage = `${errorMessage}: ${error.message}. Please try again later`;
     } else if (error.message.includes('OpenAI API error')) {
       errorMessage = `${errorMessage}: ${error.message}`;
+    } else if (error.message.includes('Failed to convert PDF page to image')) {
+      errorMessage = `${errorMessage}: Could not convert your PDF to an image. Try with a different PDF or a simpler document.`;
     } else {
       errorMessage = `${errorMessage}: ${error.message}`;
     }
