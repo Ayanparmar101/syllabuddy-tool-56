@@ -146,7 +146,7 @@ const DocumentAnalyzerPage = () => {
           if (totalQuestions === 0) {
             toast({
               title: "No Questions Found",
-              description: "No questions were detected in your PDF. Generated placeholder questions based on content.",
+              description: "Could not detect questions in your PDF. Generated sample questions based on content.",
               variant: "destructive"
             });
           } else {
@@ -189,7 +189,7 @@ const DocumentAnalyzerPage = () => {
         if (totalQuestions === 0) {
           toast({
             title: "No Questions Found",
-            description: "No questions were detected in your document. Generated placeholder questions based on content.",
+            description: "Could not detect questions in your document. Generated sample questions based on content.",
             variant: "destructive"
           });
         } else {

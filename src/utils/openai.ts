@@ -5,10 +5,6 @@ import { supabase } from "@/integrations/supabase/client";
 import * as pdfjsLib from 'pdfjs-dist';
 
 // Set up the PDF.js worker
-// Import the worker directly to ensure it's bundled with the application
-import 'pdfjs-dist/build/pdf.worker.min.mjs';
-
-// Use a compatible worker setup approach
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
   import.meta.url
@@ -61,7 +57,7 @@ export const analyzeDocumentWithGPT = async (
             
             Extract ALL questions from the document, being sure to identify anything with a question mark as a question. Format your response as a JSON object with Bloom's levels as keys and arrays of questions as values.
             
-            Important: If you can't find any questions in the document, create an array of placeholder sample questions categorized by bloom level that would be appropriate for the document content.`
+            IMPORTANT: If you don't find any questions in the document, you MUST generate at least one relevant question for EACH of the six Bloom's levels based on the document content. Make these questions deeply related to the document subject matter.`
           },
           {
             role: 'user',
@@ -120,6 +116,29 @@ export const analyzeDocumentWithGPT = async (
       }
     });
     
+    // Check if any questions were found, if not generate placeholders
+    const totalQuestions = Object.values(categorized).flat().length;
+    if (totalQuestions === 0) {
+      const orderedLevels = ['remember', 'understand', 'apply', 'analyze', 'evaluate', 'create'];
+      
+      // Generate default placeholder questions for all levels
+      orderedLevels.forEach(level => {
+        if (!categorized[level]) {
+          categorized[level] = [];
+        }
+        
+        // Add a placeholder question based on document name or generic content
+        categorized[level].push({
+          id: uuidv4(),
+          text: generatePlaceholderQuestion(level as any, documentName || 'this topic'),
+          bloomLevel: level as any,
+          confidence: 0.7,
+          createdAt: currentDate,
+          documentName
+        });
+      });
+    }
+    
     // Store the questions in Supabase
     await storeQuestionsInSupabase(categorized);
     
@@ -129,6 +148,51 @@ export const analyzeDocumentWithGPT = async (
     throw error;
   }
 };
+
+/**
+ * Generate a placeholder question for a specific Bloom's level
+ */
+function generatePlaceholderQuestion(
+  level: 'remember' | 'understand' | 'apply' | 'analyze' | 'evaluate' | 'create',
+  topic: string
+): string {
+  const questions = {
+    remember: [
+      `What are the key terms related to ${topic}?`,
+      `Can you list the main components of ${topic}?`,
+      `What are the fundamental facts about ${topic}?`
+    ],
+    understand: [
+      `How would you explain ${topic} in your own words?`,
+      `What are the main differences between aspects of ${topic}?`,
+      `Can you provide a summary of how ${topic} works?`
+    ],
+    apply: [
+      `How could you use ${topic} to solve a real-world problem?`,
+      `What would be an example of applying ${topic} in a new context?`,
+      `How would you implement ${topic} in practice?`
+    ],
+    analyze: [
+      `What are the relationships between different elements of ${topic}?`,
+      `How would you break down ${topic} into its component parts?`,
+      `What evidence supports the main themes in ${topic}?`
+    ],
+    evaluate: [
+      `What criteria would you use to assess the effectiveness of ${topic}?`,
+      `How would you judge the value or importance of ${topic}?`,
+      `What are the strengths and weaknesses of different approaches to ${topic}?`
+    ],
+    create: [
+      `How would you design a new approach to ${topic}?`,
+      `What innovations could improve current implementations of ${topic}?`,
+      `How would you integrate ${topic} with other systems or concepts?`
+    ]
+  };
+  
+  // Get random question for the level
+  const levelQuestions = questions[level];
+  return levelQuestions[Math.floor(Math.random() * levelQuestions.length)];
+}
 
 /**
  * Convert PDF page to image data URL
@@ -223,7 +287,7 @@ async function analyzeAllPDFPages(
     }
   }
   
-  // If we didn't find any questions, generate a placeholder question for each category
+  // If we didn't find any questions, generate placeholder questions for each category
   const totalQuestions = Object.values(allResults).flat().length;
   if (totalQuestions === 0) {
     console.log("No questions found in PDF, creating placeholder questions");
@@ -237,14 +301,16 @@ async function analyzeAllPDFPages(
         allResults[level] = [];
       }
       
-      // Add a placeholder question based on the bloom level
-      allResults[level].push({
-        id: uuidv4(),
-        text: `Sample ${level} question about this document content?`,
-        bloomLevel: level as any,
-        confidence: 0.8,
-        createdAt: currentDate
-      });
+      // Add 3 placeholder questions for each level for better variety
+      for (let i = 0; i < 3; i++) {
+        allResults[level].push({
+          id: uuidv4(),
+          text: generatePlaceholderQuestion(level as any, 'this PDF document'),
+          bloomLevel: level as any,
+          confidence: 0.7,
+          createdAt: currentDate
+        });
+      }
     });
   }
   
