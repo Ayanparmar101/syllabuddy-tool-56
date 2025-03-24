@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -165,13 +166,14 @@ const DocumentAnalyzerPage = () => {
 
     try {
       if (file.type === 'application/pdf') {
-        toast({
-          title: "Processing PDF",
-          description: "Analyzing all pages of your PDF. This may take a moment for multi-page documents.",
-        });
-        
-        try {
-          const result = await analyzePDFWithGPTVision(file, apiKey);
+        // If we have extracted PDF text, use that for analysis instead of the PDF Vision API
+        if (pdfText) {
+          toast({
+            title: "Analyzing Extracted Text",
+            description: "Analyzing the extracted PDF text with GPT-4o. This may take a moment.",
+          });
+          
+          const result = await analyzeDocumentWithGPT(pdfText, apiKey, file.name);
           setCategorizedQuestions(result);
           
           const totalQuestions = Object.values(result).flat().length;
@@ -185,17 +187,43 @@ const DocumentAnalyzerPage = () => {
           } else {
             toast({
               title: "PDF Analysis Complete",
-              description: `Successfully analyzed PDF and found ${totalQuestions} questions across all pages.`,
+              description: `Successfully analyzed PDF text and found ${totalQuestions} questions.`,
             });
           }
-        } catch (err) {
-          console.error('PDF processing error:', err);
-          setError(`PDF analysis failed: ${err.message}`);
+        } else {
+          // If no text has been extracted yet, use the PDF Vision API
           toast({
-            variant: "destructive",
-            title: "PDF Analysis Failed",
-            description: err.message || "An error occurred while analyzing the PDF.",
+            title: "Processing PDF",
+            description: "Analyzing all pages of your PDF. This may take a moment for multi-page documents.",
           });
+          
+          try {
+            const result = await analyzePDFWithGPTVision(file, apiKey);
+            setCategorizedQuestions(result);
+            
+            const totalQuestions = Object.values(result).flat().length;
+            
+            if (totalQuestions === 0) {
+              toast({
+                title: "No Questions Found",
+                description: "Could not detect questions in your PDF. Generated sample questions based on content.",
+                variant: "destructive"
+              });
+            } else {
+              toast({
+                title: "PDF Analysis Complete",
+                description: `Successfully analyzed PDF and found ${totalQuestions} questions across all pages.`,
+              });
+            }
+          } catch (err) {
+            console.error('PDF processing error:', err);
+            setError(`PDF analysis failed: ${err.message}`);
+            toast({
+              variant: "destructive",
+              title: "PDF Analysis Failed",
+              description: err.message || "An error occurred while analyzing the PDF.",
+            });
+          }
         }
       } 
       else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
