@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Upload, FileText, AlertTriangle, Loader2, Settings2, Clock, Database } from 'lucide-react';
+import { Upload, FileText, AlertTriangle, Loader2, Settings2, Clock, Database, FileTextIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/components/ui/use-toast';
 import BloomLevel from '@/components/BloomLevel';
@@ -10,6 +10,7 @@ import DocumentAnalysisSetting from '@/components/DocumentAnalysisSetting';
 import { 
   analyzeDocumentWithGPT, 
   analyzePDFWithGPTVision, 
+  extractTextFromPDF,
   CategorizedQuestions, 
   getAllQuestionsFromDatabase,
   formatCategorizedQuestions,
@@ -47,6 +48,8 @@ const DocumentAnalyzerPage = () => {
   const [activeTab, setActiveTab] = useState<string>('upload');
   const [historyFilter, setHistoryFilter] = useState<string>('all');
   const [documents, setDocuments] = useState<{id: string, title: string}[]>([]);
+  const [pdfText, setPdfText] = useState<string>('');
+  const [isExtractingText, setIsExtractingText] = useState(false);
 
   useEffect(() => {
     const savedApiKey = localStorage.getItem('openai-api-key');
@@ -99,6 +102,7 @@ const DocumentAnalyzerPage = () => {
     setFile(selectedFile);
     setError(null);
     setExtractedText('');
+    setPdfText('');
     setCategorizedQuestions({});
   };
 
@@ -113,6 +117,35 @@ const DocumentAnalyzerPage = () => {
       };
       reader.readAsText(file);
     });
+  };
+
+  const extractPdfText = async () => {
+    if (!file || file.type !== 'application/pdf') {
+      setError('Please select a PDF file');
+      return;
+    }
+
+    setIsExtractingText(true);
+    setPdfText('');
+    
+    try {
+      const text = await extractTextFromPDF(file);
+      setPdfText(text);
+      toast({
+        title: "Text Extracted",
+        description: "Successfully extracted text from PDF document.",
+      });
+    } catch (err) {
+      console.error('PDF text extraction error:', err);
+      setError(`Failed to extract text: ${err.message}`);
+      toast({
+        variant: "destructive",
+        title: "Extraction Failed",
+        description: err.message || "An error occurred while extracting text from the PDF.",
+      });
+    } finally {
+      setIsExtractingText(false);
+    }
   };
 
   const analyzeDocument = async () => {
@@ -276,7 +309,7 @@ const DocumentAnalyzerPage = () => {
       <div className="text-center mb-12">
         <h1 className="text-3xl font-bold mb-4">Document Analyzer</h1>
         <p className="text-muted-foreground max-w-2xl mx-auto">
-          Upload a document to extract and categorize questions based on Bloom's Taxonomy using OpenAI's GPT-4o
+          Upload a document to extract text and categorize questions based on Bloom's Taxonomy using OpenAI's GPT-4o
         </p>
       </div>
 
@@ -322,23 +355,46 @@ const DocumentAnalyzerPage = () => {
                     )}
                   </div>
                   
-                  <Button 
-                    onClick={analyzeDocument}
-                    className="bloom-btn-primary w-full"
-                    disabled={!file || isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {file && file.type === 'application/pdf' ? 'Analyzing PDF pages...' : 'Analyzing...'}
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="mr-2 h-4 w-4" />
-                        Analyze Document
-                      </>
+                  <div className="flex flex-col gap-2">
+                    {file && file.type === 'application/pdf' && (
+                      <Button 
+                        onClick={extractPdfText}
+                        className="w-full"
+                        disabled={!file || isExtractingText}
+                        variant="outline"
+                      >
+                        {isExtractingText ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Extracting Text...
+                          </>
+                        ) : (
+                          <>
+                            <FileTextIcon className="mr-2 h-4 w-4" />
+                            Extract Text from PDF
+                          </>
+                        )}
+                      </Button>
                     )}
-                  </Button>
+                    
+                    <Button 
+                      onClick={analyzeDocument}
+                      className="bloom-btn-primary w-full"
+                      disabled={!file || isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {file && file.type === 'application/pdf' ? 'Analyzing PDF pages...' : 'Analyzing...'}
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="mr-2 h-4 w-4" />
+                          Analyze Document
+                        </>
+                      )}
+                    </Button>
+                  </div>
                   
                   {error && (
                     <Alert variant="destructive">
@@ -410,12 +466,18 @@ const DocumentAnalyzerPage = () => {
         
         <div className="md:col-span-7">
           <div className="bloom-card p-6">
-            <h2 className="text-xl font-semibold mb-6">Categorized Questions</h2>
+            <h2 className="text-xl font-semibold mb-6">Document Content</h2>
             
-            {isLoading ? (
+            {isLoading || isExtractingText ? (
               <div className="flex items-center justify-center py-10">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <span className="ml-3">Analyzing document content with GPT-4o...</span>
+                <span className="ml-3">
+                  {isExtractingText ? 'Extracting text from PDF...' : 'Analyzing document content with GPT-4o...'}
+                </span>
+              </div>
+            ) : pdfText ? (
+              <div className="border rounded-md p-4 bg-muted/30 overflow-auto max-h-[400px]">
+                <pre className="whitespace-pre-wrap font-mono text-sm">{pdfText}</pre>
               </div>
             ) : Object.keys(categorizedQuestions).length > 0 ? (
               <div className="space-y-6">
@@ -535,7 +597,7 @@ const DocumentAnalyzerPage = () => {
               </div>
             ) : (
               <div className="text-center p-8">
-                <p className="text-muted-foreground">Upload a document to see categorized questions.</p>
+                <p className="text-muted-foreground">Upload a document to see extracted text or categorized questions.</p>
               </div>
             )}
           </div>

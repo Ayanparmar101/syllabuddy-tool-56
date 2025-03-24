@@ -24,6 +24,56 @@ export interface CategorizedQuestions {
 }
 
 /**
+ * Extract text from a PDF file
+ */
+export const extractTextFromPDF = async (file: File): Promise<string> => {
+  try {
+    // Read the PDF file as ArrayBuffer
+    const pdfArrayBuffer = await file.arrayBuffer();
+    
+    // Load the PDF document
+    const loadingTask = pdfjsLib.getDocument({ data: pdfArrayBuffer });
+    const pdf = await loadingTask.promise;
+    
+    const numPages = pdf.numPages;
+    console.log(`PDF loaded with ${numPages} pages`);
+    
+    // Process all pages (up to a reasonable limit)
+    const MAX_PAGES = 50;
+    const pagesToProcess = Math.min(numPages, MAX_PAGES);
+    
+    let fullText = '';
+    
+    // Extract text from each page
+    for (let i = 1; i <= pagesToProcess; i++) {
+      try {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        
+        // Concatenate the text items
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ');
+        
+        fullText += `Page ${i}:\n${pageText}\n\n`;
+      } catch (pageError) {
+        console.error(`Error extracting text from page ${i}:`, pageError);
+        fullText += `[Error extracting text from page ${i}]\n\n`;
+      }
+    }
+    
+    if (numPages > MAX_PAGES) {
+      fullText += `\n[Note: Only showed text from the first ${MAX_PAGES} pages. The PDF has ${numPages} pages in total.]\n`;
+    }
+    
+    return fullText || 'No text could be extracted from this PDF. The document might be scanned or contain only images.';
+  } catch (error) {
+    console.error('Error extracting text from PDF:', error);
+    throw new Error('Failed to extract text from the PDF. The file might be damaged or password-protected.');
+  }
+};
+
+/**
  * Analyze document content using OpenAI's GPT-4o to categorize questions
  * according to Bloom's Taxonomy levels
  */
