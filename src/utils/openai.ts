@@ -9,8 +9,11 @@ import * as pdfjsLib from 'pdfjs-dist';
 // Import the worker directly to ensure it's bundled with the application
 import 'pdfjs-dist/build/pdf.worker.min.mjs';
 
-// Use a local worker path that will be resolved during build
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsLib.DefaultWorkerMessageHandler;
+// Use a compatible worker setup approach
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
 
 export interface AnalyzedQuestion {
   id: string;
