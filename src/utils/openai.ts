@@ -1,3 +1,4 @@
+
 // OpenAI integration utility functions
 
 import { v4 as uuidv4 } from 'uuid';
@@ -5,8 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
 import * as pdfjsLib from 'pdfjs-dist';
 
 // Set up the PDF.js worker
-// The worker needs to be imported directly to ensure it's bundled correctly
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
+// Import the worker directly to ensure it's bundled with the application
+import 'pdfjs-dist/build/pdf.worker.min.mjs';
+
+// Use a local worker path that will be resolved during build
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsLib.DefaultWorkerMessageHandler;
 
 export interface AnalyzedQuestion {
   id: string;

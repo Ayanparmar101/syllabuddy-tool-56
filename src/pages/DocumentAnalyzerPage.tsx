@@ -137,15 +137,25 @@ const DocumentAnalyzerPage = () => {
           description: "Analyzing all pages of your PDF. This may take a moment for multi-page documents.",
         });
         
-        const result = await analyzePDFWithGPTVision(file, apiKey);
-        setCategorizedQuestions(result);
-        
-        const totalQuestions = Object.values(result).flat().length;
-        
-        toast({
-          title: "PDF Analysis Complete",
-          description: `Successfully analyzed PDF and found ${totalQuestions} questions across all pages.`,
-        });
+        try {
+          const result = await analyzePDFWithGPTVision(file, apiKey);
+          setCategorizedQuestions(result);
+          
+          const totalQuestions = Object.values(result).flat().length;
+          
+          toast({
+            title: "PDF Analysis Complete",
+            description: `Successfully analyzed PDF and found ${totalQuestions} questions across all pages.`,
+          });
+        } catch (err) {
+          console.error('PDF processing error:', err);
+          setError(`PDF analysis failed: ${err.message}`);
+          toast({
+            variant: "destructive",
+            title: "PDF Analysis Failed",
+            description: err.message || "An error occurred while analyzing the PDF.",
+          });
+        }
       } 
       else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
                 file.type === 'application/msword') {
