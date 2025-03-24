@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from "@/integrations/supabase/client";
@@ -178,74 +177,46 @@ export const useDocumentAnalysis = () => {
     }
 
     setIsLoading(true);
+    setIsExtractingText(true);
     setError(null);
+    setPdfText('');
 
     try {
       if (file.type === 'application/pdf') {
-        // If we have extracted PDF text, use that for analysis instead of the PDF Vision API
-        if (pdfText) {
+        toast({
+          title: "Processing PDF",
+          description: "Extracting text and analyzing content. This may take a moment.",
+        });
+        
+        // First, extract text from PDF
+        const extractedText = await extractTextFromPDF(file);
+        setPdfText(extractedText);
+        
+        // Then analyze the extracted text
+        setIsExtractingText(false);
+        
+        // Pass false to skip automatic database storage
+        const result = await analyzeDocumentWithGPT(extractedText, apiKey, file.name, false);
+        setCategorizedQuestions(result);
+        
+        const totalQuestions = Object.values(result).flat().length;
+        
+        if (totalQuestions === 0) {
           toast({
-            title: "Analyzing Extracted Text",
-            description: "Analyzing the extracted PDF text with GPT-4o. This may take a moment.",
+            title: "No Questions Found",
+            description: "Could not detect questions in your PDF. Generated sample questions based on content.",
+            variant: "destructive"
           });
-          
-          // Pass false to skip automatic database storage
-          const result = await analyzeDocumentWithGPT(pdfText, apiKey, file.name, false);
-          setCategorizedQuestions(result);
-          
-          const totalQuestions = Object.values(result).flat().length;
-          
-          if (totalQuestions === 0) {
-            toast({
-              title: "No Questions Found",
-              description: "Could not detect questions in your PDF. Generated sample questions based on content.",
-              variant: "destructive"
-            });
-          } else {
-            toast({
-              title: "PDF Analysis Complete",
-              description: `Successfully analyzed PDF text and found ${totalQuestions} questions.`,
-            });
-          }
         } else {
-          // If no text has been extracted yet, use the PDF Vision API
           toast({
-            title: "Processing PDF",
-            description: "Analyzing all pages of your PDF. This may take a moment for multi-page documents.",
+            title: "PDF Analysis Complete",
+            description: `Successfully analyzed PDF text and found ${totalQuestions} questions.`,
           });
-          
-          try {
-            // Pass false to skip automatic database storage
-            const result = await analyzePDFWithGPTVision(file, apiKey, false);
-            setCategorizedQuestions(result);
-            
-            const totalQuestions = Object.values(result).flat().length;
-            
-            if (totalQuestions === 0) {
-              toast({
-                title: "No Questions Found",
-                description: "Could not detect questions in your PDF. Generated sample questions based on content.",
-                variant: "destructive"
-              });
-            } else {
-              toast({
-                title: "PDF Analysis Complete",
-                description: `Successfully analyzed PDF and found ${totalQuestions} questions across all pages.`,
-              });
-            }
-          } catch (err) {
-            console.error('PDF processing error:', err);
-            setError(`PDF analysis failed: ${err.message}`);
-            toast({
-              variant: "destructive",
-              title: "PDF Analysis Failed",
-              description: err.message || "An error occurred while analyzing the PDF.",
-            });
-          }
         }
       } 
       else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
                 file.type === 'application/msword') {
+        setIsExtractingText(false);
         const mockContent = "This is sample Word document content extracted for analysis. What is the capital of France? How would you explain photosynthesis? Can you apply the Pythagorean theorem to solve this problem? Analyze the causes of World War II. Do you think climate change is a significant threat? How would you design a more efficient public transportation system?";
         
         setExtractedText(mockContent);
@@ -261,6 +232,8 @@ export const useDocumentAnalysis = () => {
       else {
         const content = await readFileContent(file);
         setExtractedText(content);
+        setIsExtractingText(false);
+        
         // Pass false to skip automatic database storage
         const result = await analyzeDocumentWithGPT(content, apiKey, file.name, false);
         setCategorizedQuestions(result);
@@ -295,6 +268,7 @@ export const useDocumentAnalysis = () => {
       });
     } finally {
       setIsLoading(false);
+      setIsExtractingText(false);
     }
   };
 

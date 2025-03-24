@@ -52,7 +52,7 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
               <span>{file.name} ({(file.size / 1024).toFixed(2)} KB)</span>
               {file.type === 'application/pdf' && (
                 <span className="ml-2 text-blue-500 text-xs">
-                  Multi-page support enabled
+                  PDF support enabled
                 </span>
               )}
             </div>
@@ -65,36 +65,15 @@ const DocumentUploader: React.FC<DocumentUploaderProps> = ({
         </div>
         
         <div className="flex flex-col gap-2">
-          {file && file.type === 'application/pdf' && (
-            <Button 
-              onClick={onExtractPdfText}
-              className="w-full"
-              disabled={!file || isExtractingText}
-              variant="outline"
-            >
-              {isExtractingText ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Extracting Text...
-                </>
-              ) : (
-                <>
-                  <FileTextIcon className="mr-2 h-4 w-4" />
-                  Extract Text from PDF
-                </>
-              )}
-            </Button>
-          )}
-          
           <Button 
             onClick={onAnalyzeDocument}
             className="bloom-btn-primary w-full"
-            disabled={!file || isLoading}
+            disabled={!file || isLoading || isExtractingText}
           >
-            {isLoading ? (
+            {isLoading || isExtractingText ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {file && file.type === 'application/pdf' ? 'Analyzing PDF pages...' : 'Analyzing...'}
+                {isExtractingText ? 'Extracting Text...' : 'Analyzing Document...'}
               </>
             ) : (
               <>
