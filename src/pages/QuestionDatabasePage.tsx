@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +35,15 @@ import { FileDown, PlusCircle, Trash2, Edit, FileText } from 'lucide-react';
 import BloomLevelSelector from '@/components/BloomLevelSelector';
 import { useQuestionDatabase } from '@/hooks/useQuestionDatabase';
 import QuestionPaperGenerator from '@/components/QuestionPaperGenerator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { 
+  Pagination,
+  PaginationContent,
+  PaginationItem, 
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
+} from '@/components/ui/pagination';
 
 const QuestionDatabasePage = () => {
   const { 
@@ -56,6 +64,9 @@ const QuestionDatabasePage = () => {
   const [bloomLevel, setBloomLevel] = useState<any>(null);
   const [marks, setMarks] = useState(1);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const questionsPerPage = 10;
+  
   useEffect(() => {
     fetchQuestions();
   }, [fetchQuestions]);
@@ -103,7 +114,6 @@ const QuestionDatabasePage = () => {
         });
       }
       
-      // Reset form
       setQuestionText('');
       setBloomLevel(null);
       setMarks(1);
@@ -142,6 +152,15 @@ const QuestionDatabasePage = () => {
         });
       }
     }
+  };
+
+  const indexOfLastQuestion = currentPage * questionsPerPage;
+  const indexOfFirstQuestion = indexOfLastQuestion - questionsPerPage;
+  const currentQuestions = questions.slice(indexOfFirstQuestion, indexOfLastQuestion);
+  const totalPages = Math.ceil(questions.length / questionsPerPage);
+
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
   };
 
   return (
@@ -249,51 +268,88 @@ const QuestionDatabasePage = () => {
         </div>
       ) : (
         <div className="bg-white rounded-md shadow">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Question</TableHead>
-                <TableHead>Bloom's Level</TableHead>
-                <TableHead>Marks</TableHead>
-                <TableHead className="w-[120px]">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {questions.length === 0 ? (
+          <ScrollArea className="h-[500px] rounded-md">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                    No questions added yet. Click "Add Question" to create one.
-                  </TableCell>
+                  <TableHead>Question</TableHead>
+                  <TableHead>Bloom's Level</TableHead>
+                  <TableHead>Marks</TableHead>
+                  <TableHead className="w-[120px]">Actions</TableHead>
                 </TableRow>
-              ) : (
-                questions.map((question) => (
-                  <TableRow key={question.id}>
-                    <TableCell className="font-medium">{question.text}</TableCell>
-                    <TableCell className="capitalize">{question.bloom_level}</TableCell>
-                    <TableCell>{question.marks}</TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(question)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(question.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
+              </TableHeader>
+              <TableBody>
+                {questions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      No questions added yet. Click "Add Question" to create one.
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  currentQuestions.map((question) => (
+                    <TableRow key={question.id}>
+                      <TableCell className="font-medium">{question.text}</TableCell>
+                      <TableCell className="capitalize">{question.bloom_level}</TableCell>
+                      <TableCell>{question.marks}</TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(question)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(question.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </ScrollArea>
+          
+          {questions.length > questionsPerPage && (
+            <div className="mt-4 flex justify-center">
+              <Pagination>
+                <PaginationContent>
+                  {currentPage > 1 && (
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => handlePageChange(currentPage - 1)} 
+                      />
+                    </PaginationItem>
+                  )}
+                  
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <PaginationItem key={page}>
+                      <PaginationLink 
+                        isActive={currentPage === page}
+                        onClick={() => handlePageChange(page)}
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  
+                  {currentPage < totalPages && (
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => handlePageChange(currentPage + 1)} 
+                      />
+                    </PaginationItem>
+                  )}
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </div>
       )}
     </div>
