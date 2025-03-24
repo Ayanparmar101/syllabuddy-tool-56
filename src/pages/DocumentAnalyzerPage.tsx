@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Question {
   id: string;
@@ -46,6 +46,7 @@ const DocumentAnalyzerPage = () => {
   const [apiKey, setApiKey] = useState<string>('');
   const [activeTab, setActiveTab] = useState<string>('upload');
   const [historyFilter, setHistoryFilter] = useState<string>('all');
+  const [documents, setDocuments] = useState<{id: string, title: string}[]>([]);
 
   // Load API key from localStorage on component mount
   useEffect(() => {
@@ -54,7 +55,27 @@ const DocumentAnalyzerPage = () => {
       setApiKey(savedApiKey);
     }
     loadStoredQuestions();
+    loadDocuments();
   }, []);
+
+  // Load documents from Supabase
+  const loadDocuments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('documents')
+        .select('id, title')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error loading documents:', error);
+        return;
+      }
+      
+      setDocuments(data || []);
+    } catch (error) {
+      console.error('Error loading documents:', error);
+    }
+  };
 
   // Load stored questions from the database
   const loadStoredQuestions = async () => {
@@ -153,28 +174,52 @@ const DocumentAnalyzerPage = () => {
         });
       }
 
-      // Refresh the stored questions list
+      // Refresh the stored questions list and documents
       await loadStoredQuestions();
+      await loadDocuments();
     } catch (err) {
       console.error('Error analyzing document:', err);
-      setError('Failed to analyze document. Please check your API key and try again.');
+      setError(`Failed to analyze document: ${err.message}`);
       toast({
         variant: "destructive",
         title: "Analysis Failed",
-        description: "An error occurred while analyzing the document.",
+        description: err.message || "An error occurred while analyzing the document.",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const addToQuestionBank = (question: Question) => {
-    // In a real implementation, this would add the question to the question bank
-    // For now, just show a toast notification
-    toast({
-      title: "Question Added",
-      description: `Added "${question.text.substring(0, 30)}..." to your question bank.`,
-    });
+  const addToQuestionBank = async (question: Question) => {
+    try {
+      const { error } = await supabase
+        .from('questions')
+        .insert({
+          text: question.text,
+          bloom_level: question.bloomLevel,
+          created_at: new Date().toISOString(),
+          keywords: []
+        });
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Question Added",
+        description: `Added "${question.text.substring(0, 30)}..." to your question bank.`,
+      });
+      
+      // Refresh questions
+      await loadStoredQuestions();
+    } catch (error) {
+      console.error('Error adding question:', error);
+      toast({
+        variant: "destructive",
+        title: "Failed to Add Question",
+        description: "There was an error adding this question to your question bank.",
+      });
+    }
   };
 
   // Filter history by document or date
@@ -285,11 +330,11 @@ const DocumentAnalyzerPage = () => {
           {/* History section - below the upload card */}
           <div className="bloom-card p-6 mt-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Question History</h2>
+              <h2 className="text-xl font-semibold">Document History</h2>
               <div className="flex items-center">
                 <Clock className="h-4 w-4 mr-2 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">
-                  {allStoredQuestions.length} questions stored
+                  {documents.length} documents stored
                 </span>
               </div>
             </div>
@@ -297,7 +342,7 @@ const DocumentAnalyzerPage = () => {
             {isLoadingHistory ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <span className="ml-2">Loading stored questions...</span>
+                <span className="ml-2">Loading stored documents...</span>
               </div>
             ) : (
               <>
@@ -309,9 +354,9 @@ const DocumentAnalyzerPage = () => {
                     <SelectContent>
                       <SelectItem value="all">All Questions</SelectItem>
                       <SelectItem value="latest">Latest 20</SelectItem>
-                      {documentNames.map(name => (
-                        <SelectItem key={name} value={name}>
-                          {name}
+                      {documents.map(doc => (
+                        <SelectItem key={doc.id} value={doc.title}>
+                          {doc.title}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -321,7 +366,7 @@ const DocumentAnalyzerPage = () => {
                 <div className="text-sm text-muted-foreground">
                   <div className="flex items-center mb-2">
                     <Database className="h-4 w-4 mr-2" />
-                    <span>Questions are stored locally in your browser</span>
+                    <span>Questions are stored in Supabase database</span>
                   </div>
                   {historyFilter !== 'all' && (
                     <p>

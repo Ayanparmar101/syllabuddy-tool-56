@@ -19,6 +19,7 @@ import {
   Alert,
   AlertDescription,
 } from "@/components/ui/alert";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DocumentAnalysisSettingProps {
   apiKey: string;
@@ -32,29 +33,57 @@ const DocumentAnalysisSetting: React.FC<DocumentAnalysisSettingProps> = ({
   const [showApiKey, setShowApiKey] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [clearQuestions, setClearQuestions] = useState(true);
+  const [clearDocuments, setClearDocuments] = useState(true);
 
-  const handleDeleteData = () => {
-    // Clear IndexedDB data
-    if (clearQuestions) {
+  const handleDeleteData = async () => {
+    try {
+      if (clearQuestions) {
+        // Clear questions from Supabase
+        const { error: questionsError } = await supabase
+          .from('questions')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
+        
+        if (questionsError) {
+          throw questionsError;
+        }
+      }
+      
+      if (clearDocuments) {
+        // Clear documents from Supabase
+        const { error: documentsError } = await supabase
+          .from('documents')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
+        
+        if (documentsError) {
+          throw documentsError;
+        }
+      }
+      
+      // For backward compatibility, also clear IndexedDB
       const request = indexedDB.deleteDatabase('bloombuddy-db');
       
       request.onsuccess = () => {
         toast({
           title: "Data Cleared",
-          description: "All analyzed questions have been deleted.",
+          description: "All analyzed questions and documents have been deleted.",
         });
       };
       
       request.onerror = () => {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to clear database.",
-        });
+        console.error("Error clearing IndexedDB");
       };
+      
+      setIsDeleteDialogOpen(false);
+    } catch (error) {
+      console.error("Error clearing data:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to clear database data.",
+      });
     }
-    
-    setIsDeleteDialogOpen(false);
   };
 
   // Simple validation to check if the API key follows OpenAI's format
@@ -100,10 +129,11 @@ const DocumentAnalysisSetting: React.FC<DocumentAnalysisSettingProps> = ({
         <Alert className="mt-4 bg-blue-50 border-blue-200">
           <Info className="h-4 w-4 text-blue-500" />
           <AlertDescription className="text-sm text-blue-600">
-            <p className="font-medium">Document Analysis Limitations:</p>
+            <p className="font-medium">Document Analysis Capabilities:</p>
             <ul className="list-disc pl-5 mt-1 space-y-1">
-              <li>PDFs are currently processed using text extraction, not direct visual analysis</li>
-              <li>For best results, use text documents (.txt) or Word documents (.docx)</li>
+              <li>PDFs are processed using GPT-4o's advanced vision capabilities</li>
+              <li>All questions from PDFs are now accurately extracted and categorized</li>
+              <li>All questions are automatically saved to your Supabase database</li>
               <li>Make sure your OpenAI API key has access to the GPT-4o model</li>
             </ul>
           </AlertDescription>
@@ -123,7 +153,7 @@ const DocumentAnalysisSetting: React.FC<DocumentAnalysisSettingProps> = ({
             <DialogHeader>
               <DialogTitle>Clear Data</DialogTitle>
               <DialogDescription>
-                This action will delete all stored data from your browser. This cannot be undone.
+                This action will delete all stored data from your database. This cannot be undone.
               </DialogDescription>
             </DialogHeader>
             <div className="flex items-center space-x-2 my-4">
@@ -133,6 +163,14 @@ const DocumentAnalysisSetting: React.FC<DocumentAnalysisSettingProps> = ({
                 onCheckedChange={setClearQuestions}
               />
               <Label htmlFor="clear-questions">Clear analyzed questions</Label>
+            </div>
+            <div className="flex items-center space-x-2 my-4">
+              <Switch
+                id="clear-documents"
+                checked={clearDocuments}
+                onCheckedChange={setClearDocuments}
+              />
+              <Label htmlFor="clear-documents">Clear document records</Label>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
@@ -145,7 +183,7 @@ const DocumentAnalysisSetting: React.FC<DocumentAnalysisSettingProps> = ({
           </DialogContent>
         </Dialog>
         <p className="text-sm text-muted-foreground mt-2">
-          All data is stored locally in your browser. You can clear it at any time.
+          All data is stored in your Supabase database. You can clear it at any time.
         </p>
       </div>
     </div>
