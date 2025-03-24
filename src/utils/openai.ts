@@ -3,10 +3,14 @@
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from "@/integrations/supabase/client";
 import * as pdfjsLib from 'pdfjs-dist';
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.entry';
 
 // Set up the PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+// Different versions of pdfjs-dist have different worker paths
+// For version 4.x.x
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.js',
+  import.meta.url
+).toString();
 
 export interface AnalyzedQuestion {
   id: string;
@@ -670,3 +674,4 @@ export const storeQuestionsInDatabase = async (
     throw error;
   }
 };
+
