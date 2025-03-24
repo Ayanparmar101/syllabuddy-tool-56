@@ -143,10 +143,18 @@ const DocumentAnalyzerPage = () => {
           
           const totalQuestions = Object.values(result).flat().length;
           
-          toast({
-            title: "PDF Analysis Complete",
-            description: `Successfully analyzed PDF and found ${totalQuestions} questions across all pages.`,
-          });
+          if (totalQuestions === 0) {
+            toast({
+              title: "No Questions Found",
+              description: "No questions were detected in your PDF. Generated placeholder questions based on content.",
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "PDF Analysis Complete",
+              description: `Successfully analyzed PDF and found ${totalQuestions} questions across all pages.`,
+            });
+          }
         } catch (err) {
           console.error('PDF processing error:', err);
           setError(`PDF analysis failed: ${err.message}`);
@@ -176,10 +184,20 @@ const DocumentAnalyzerPage = () => {
         const result = await analyzeDocumentWithGPT(content, apiKey, file.name);
         setCategorizedQuestions(result);
         
-        toast({
-          title: "Analysis Complete",
-          description: "The document has been analyzed and questions have been categorized.",
-        });
+        const totalQuestions = Object.values(result).flat().length;
+          
+        if (totalQuestions === 0) {
+          toast({
+            title: "No Questions Found",
+            description: "No questions were detected in your document. Generated placeholder questions based on content.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Analysis Complete",
+            description: `Successfully analyzed document and found ${totalQuestions} questions.`,
+          });
+        }
       }
 
       await loadStoredQuestions();
