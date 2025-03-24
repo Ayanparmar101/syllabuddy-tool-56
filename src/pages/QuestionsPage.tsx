@@ -1,74 +1,113 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useQuestionDatabase } from '@/hooks/useQuestionDatabase';
 import QuestionBuilder from '@/components/QuestionBuilder';
 import QuestionBank from '@/components/QuestionBank';
+import QuestionPaperGenerator from '@/components/QuestionPaperGenerator';
 import { Button } from '@/components/ui/button';
 import { FileDown, AlertTriangle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/components/ui/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 type BloomLevelType = 'remember' | 'understand' | 'apply' | 'analyze' | 'evaluate' | 'create';
 
-type Question = {
-  id: string;
-  text: string;
-  bloomLevel: BloomLevelType;
-  marks?: number;
-};
-
 const QuestionsPage = () => {
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const { 
+    questions, 
+    loading, 
+    error, 
+    fetchQuestions, 
+    addQuestion, 
+    updateQuestion, 
+    deleteQuestion 
+  } = useQuestionDatabase();
+  
+  const [editingQuestion, setEditingQuestion] = useState<any>(null);
+  const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
 
-  const handleAddQuestion = (question: Question) => {
+  useEffect(() => {
+    fetchQuestions();
+  }, [fetchQuestions]);
+
+  const handleAddQuestion = (question: {
+    id: string;
+    text: string;
+    bloomLevel: BloomLevelType;
+    marks?: number;
+  }) => {
     if (editingQuestion) {
       // Update existing question
-      setQuestions(
-        questions.map(q => (q.id === editingQuestion.id ? question : q))
-      );
-      setEditingQuestion(null);
-      toast({
-        title: "Question updated",
-        description: "The question has been successfully updated."
+      updateQuestion({
+        id: editingQuestion.id,
+        text: question.text,
+        bloom_level: question.bloomLevel,
+        marks: question.marks
+      }).then(() => {
+        setEditingQuestion(null);
+        toast({
+          title: "Question updated",
+          description: "The question has been successfully updated."
+        });
+      }).catch(err => {
+        console.error('Error updating question:', err);
+        toast({
+          title: "Error",
+          description: "Failed to update question",
+          variant: "destructive"
+        });
       });
     } else {
       // Add new question
-      setQuestions([...questions, question]);
-      toast({
-        title: "Question added",
-        description: "The question has been added to your question bank."
+      addQuestion({
+        text: question.text,
+        bloom_level: question.bloomLevel,
+        marks: question.marks
+      }).then(() => {
+        toast({
+          title: "Question added",
+          description: "The question has been added to your question bank."
+        });
+      }).catch(err => {
+        console.error('Error adding question:', err);
+        toast({
+          title: "Error",
+          description: "Failed to add question",
+          variant: "destructive"
+        });
       });
     }
   };
 
   const handleDeleteQuestion = (id: string) => {
-    setQuestions(questions.filter(q => q.id !== id));
-    toast({
-      title: "Question deleted",
-      description: "The question has been removed from your question bank."
+    deleteQuestion(id).then(() => {
+      toast({
+        title: "Question deleted",
+        description: "The question has been removed from your question bank."
+      });
+    }).catch(err => {
+      console.error('Error deleting question:', err);
+      toast({
+        title: "Error",
+        description: "Failed to delete question",
+        variant: "destructive"
+      });
     });
   };
 
-  const handleEditQuestion = (question: Question) => {
-    setEditingQuestion(question);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleGenerateDocument = () => {
-    if (questions.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "No questions available",
-        description: "Please add at least one question before generating a document."
-      });
-      return;
-    }
-    
-    // In a real implementation, this would generate and download a document
-    // For demonstration, we'll just show a success message
-    toast({
-      title: "Document generated",
-      description: "Your question paper has been generated and is ready for download."
+  const handleEditQuestion = (question: any) => {
+    // Convert from database format to component format
+    setEditingQuestion({
+      id: question.id,
+      text: question.text,
+      bloomLevel: question.bloomLevel,
+      marks: question.marks
     });
   };
 
@@ -88,24 +127,39 @@ const QuestionsPage = () => {
         
         <div className="md:col-span-7">
           <QuestionBank 
-            questions={questions} 
+            questions={questions.map(q => ({
+              id: q.id,
+              text: q.text,
+              bloomLevel: q.bloom_level as BloomLevelType,
+              marks: q.marks
+            }))} 
             onDeleteQuestion={handleDeleteQuestion}
             onEditQuestion={handleEditQuestion}
           />
           
-          {questions.length > 0 && (
+          {!loading && questions.length > 0 && (
             <div className="mt-6">
-              <Button 
-                onClick={handleGenerateDocument}
-                className="bloom-btn-primary w-full"
-              >
-                <FileDown className="mr-2 h-4 w-4" />
-                Generate Question Paper
-              </Button>
+              <Dialog open={isGeneratorOpen} onOpenChange={setIsGeneratorOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    className="bloom-btn-primary w-full"
+                  >
+                    <FileDown className="mr-2 h-4 w-4" />
+                    Generate Question Paper
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                  <DialogTitle>Generate Question Paper</DialogTitle>
+                  <DialogDescription>
+                    Select questions and customize your question paper
+                  </DialogDescription>
+                  <QuestionPaperGenerator questions={questions} />
+                </DialogContent>
+              </Dialog>
             </div>
           )}
           
-          {questions.length === 0 && (
+          {!loading && questions.length === 0 && (
             <div className="mt-6">
               <Alert>
                 <AlertTriangle className="h-4 w-4 mr-2" />
