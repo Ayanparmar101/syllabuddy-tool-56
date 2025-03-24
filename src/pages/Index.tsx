@@ -3,7 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { BookOpen, FileText, HelpCircle } from 'lucide-react';
+import { FileText, HelpCircle } from 'lucide-react';
 import BloomLevel from '@/components/BloomLevel';
 
 const Index = () => {
@@ -20,18 +20,18 @@ const Index = () => {
                 Design Better Educational Content with <span className="text-primary">Bloom's Taxonomy</span>
               </h1>
               <p className="text-lg text-muted-foreground mb-8 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-                BloomBuddy helps educators create effective syllabi and assessment questions 
+                BloomBuddy helps educators create effective assessment questions 
                 guided by cognitive learning levels.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 animate-fade-in" style={{ animationDelay: '0.4s' }}>
-                <Link to="/syllabus">
+                <Link to="/questions">
                   <Button size="lg" className="bloom-btn-primary">
-                    Build a Syllabus
+                    Create Questions
                   </Button>
                 </Link>
-                <Link to="/questions">
+                <Link to="/document-analyzer">
                   <Button size="lg" variant="outline" className="bloom-btn-secondary">
-                    Create Questions
+                    Analyze Documents
                   </Button>
                 </Link>
               </div>
@@ -88,17 +88,7 @@ const Index = () => {
             </p>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="bloom-card">
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                <BookOpen className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Syllabus Builder</h3>
-              <p className="text-muted-foreground">
-                Create comprehensive syllabi organized by modules and topics with clear learning objectives.
-              </p>
-            </Card>
-            
+          <div className="grid md:grid-cols-2 gap-8">
             <Card className="bloom-card">
               <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                 <FileText className="h-6 w-6 text-primary" />
@@ -127,17 +117,17 @@ const Index = () => {
         <div className="container px-4 mx-auto max-w-6xl text-center">
           <h2 className="text-3xl font-bold mb-4">Ready to Enhance Your Educational Materials?</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto mb-8">
-            Start creating syllabi and assessment questions aligned with Bloom's Taxonomy today.
+            Start creating assessment questions aligned with Bloom's Taxonomy today.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/syllabus">
+            <Link to="/questions">
               <Button size="lg" className="bloom-btn-primary">
-                Build a Syllabus
+                Create Questions
               </Button>
             </Link>
-            <Link to="/questions">
+            <Link to="/document-analyzer">
               <Button size="lg" variant="outline" className="bloom-btn-secondary">
-                Create Questions
+                Analyze Documents
               </Button>
             </Link>
           </div>
