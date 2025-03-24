@@ -11,6 +11,7 @@ import QuestionsPage from "@/pages/QuestionsPage";
 import DocumentAnalyzerPage from "@/pages/DocumentAnalyzerPage";
 import AboutPage from "@/pages/AboutPage";
 import NotFound from "@/pages/NotFound";
+import QuestionDatabasePage from "@/pages/QuestionDatabasePage";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/questions" element={<QuestionsPage />} />
+              <Route path="/question-database" element={<QuestionDatabasePage />} />
               <Route path="/document-analyzer" element={<DocumentAnalyzerPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="*" element={<NotFound />} />

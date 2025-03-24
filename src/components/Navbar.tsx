@@ -2,7 +2,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { FileText, Home, HelpCircle, FileQuestion } from 'lucide-react';
+import { FileText, Home, HelpCircle, FileQuestion, Database } from 'lucide-react';
 
 const Navbar = () => {
   return (
@@ -40,6 +40,20 @@ const Navbar = () => {
               <div className="flex items-center">
                 <FileQuestion className="w-4 h-4 mr-1" />
                 Questions
+              </div>
+            </NavLink>
+            
+            <NavLink 
+              to="/question-database" 
+              className={({ isActive }) => 
+                `px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors ${
+                  isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                }`
+              }
+            >
+              <div className="flex items-center">
+                <Database className="w-4 h-4 mr-1" />
+                Question Database
               </div>
             </NavLink>
             
