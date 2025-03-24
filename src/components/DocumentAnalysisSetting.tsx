@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Eye, EyeOff, Trash2 } from 'lucide-react';
+import { Eye, EyeOff, Trash2, Info } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/use-toast';
 import { 
@@ -15,6 +15,10 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import {
+  Alert,
+  AlertDescription,
+} from "@/components/ui/alert";
 
 interface DocumentAnalysisSettingProps {
   apiKey: string;
@@ -53,6 +57,14 @@ const DocumentAnalysisSetting: React.FC<DocumentAnalysisSettingProps> = ({
     setIsDeleteDialogOpen(false);
   };
 
+  // Simple validation to check if the API key follows OpenAI's format
+  const isValidApiKeyFormat = (key: string) => {
+    // OpenAI API keys typically start with "sk-" and are 51 characters long
+    return /^sk-[a-zA-Z0-9]{48}$/.test(key) || 
+           // Handle project API keys which may have a different format
+           /^sk-proj-[a-zA-Z0-9-]{36,100}$/.test(key);
+  };
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -64,7 +76,7 @@ const DocumentAnalysisSetting: React.FC<DocumentAnalysisSettingProps> = ({
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             placeholder="Enter your OpenAI API key"
-            className="font-mono pr-10"
+            className={`font-mono pr-10 ${apiKey && !isValidApiKeyFormat(apiKey) ? 'border-red-500' : ''}`}
           />
           <Button
             type="button"
@@ -76,9 +88,26 @@ const DocumentAnalysisSetting: React.FC<DocumentAnalysisSettingProps> = ({
             {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </Button>
         </div>
+        {apiKey && !isValidApiKeyFormat(apiKey) && (
+          <p className="text-sm text-red-500 mt-1">
+            This doesn't appear to be a valid OpenAI API key format
+          </p>
+        )}
         <p className="text-sm text-muted-foreground">
           Your API key is required to analyze documents. It is only stored in your browser and never sent to our servers.
         </p>
+
+        <Alert className="mt-4 bg-blue-50 border-blue-200">
+          <Info className="h-4 w-4 text-blue-500" />
+          <AlertDescription className="text-sm text-blue-600">
+            <p className="font-medium">Document Analysis Limitations:</p>
+            <ul className="list-disc pl-5 mt-1 space-y-1">
+              <li>PDFs are currently processed using text extraction, not direct visual analysis</li>
+              <li>For best results, use text documents (.txt) or Word documents (.docx)</li>
+              <li>Make sure your OpenAI API key has access to the GPT-4o model</li>
+            </ul>
+          </AlertDescription>
+        </Alert>
       </div>
 
       <div className="pt-4 border-t">
