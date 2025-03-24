@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from "@/integrations/supabase/client";
@@ -180,6 +181,7 @@ export const useDocumentAnalysis = () => {
     setIsExtractingText(true);
     setError(null);
     setPdfText('');
+    setCategorizedQuestions({});
 
     try {
       if (file.type === 'application/pdf') {
@@ -191,11 +193,9 @@ export const useDocumentAnalysis = () => {
         // First, extract text from PDF
         const extractedText = await extractTextFromPDF(file);
         setPdfText(extractedText);
-        
-        // Then analyze the extracted text
         setIsExtractingText(false);
         
-        // Pass false to skip automatic database storage
+        // Then analyze the extracted text
         const result = await analyzeDocumentWithGPT(extractedText, apiKey, file.name, false);
         setCategorizedQuestions(result);
         

@@ -112,20 +112,26 @@ const DocumentContent: React.FC<DocumentContentProps> = ({
       );
     }
 
-    if (pdfText) {
-      return (
-        <div className="border rounded-md p-4 bg-muted/30 overflow-auto max-h-[400px]">
-          <pre className="whitespace-pre-wrap font-mono text-sm">{pdfText}</pre>
-        </div>
-      );
-    }
-
+    // Show categorized questions first if they exist
     if (Object.keys(categorizedQuestions).length > 0) {
       return renderQuestionList(categorizedQuestions);
     }
 
+    // If viewing history questions
     if (Object.keys(filteredQuestions).length > 0) {
       return renderQuestionList(filteredQuestions);
+    }
+
+    // If PDF text was extracted but no questions were categorized
+    if (pdfText) {
+      return (
+        <div>
+          <p className="mb-4 text-muted-foreground">Extracted text from PDF:</p>
+          <div className="border rounded-md p-4 bg-muted/30 overflow-auto max-h-[400px]">
+            <pre className="whitespace-pre-wrap font-mono text-sm">{pdfText}</pre>
+          </div>
+        </div>
+      );
     }
 
     if (extractedText) {
