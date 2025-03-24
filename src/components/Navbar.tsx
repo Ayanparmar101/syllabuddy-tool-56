@@ -1,80 +1,97 @@
 
-import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { FileText, Home, BookOpen, HelpCircle, FileQuestion } from 'lucide-react';
 
-const Navbar: React.FC = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const location = useLocation();
-  
-  const isActive = (path: string) => location.pathname === path;
-  
-  const navLinks = [
-    { name: 'Home', path: '/' },
-    { name: 'Syllabus Builder', path: '/syllabus' },
-    { name: 'Question Builder', path: '/questions' },
-    { name: 'About', path: '/about' }
-  ];
-
+const Navbar = () => {
   return (
-    <nav className="bg-white/80 backdrop-blur-lg sticky top-0 z-50 border-b border-border py-4 px-6">
-      <div className="container mx-auto">
-        <div className="flex justify-between items-center">
-          <Link to="/" className="flex items-center">
-            <span className="font-bold text-xl text-primary">BloomBuddy</span>
-          </Link>
-          
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex space-x-8">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={`transition-all duration-200 ${
-                  isActive(link.path) 
-                    ? 'text-primary font-medium'
-                    : 'text-foreground hover:text-primary'
-                }`}
-              >
-                {link.name}
-              </Link>
-            ))}
+    <header className="bg-background border-b border-border sticky top-0 z-40">
+      <div className="container mx-auto px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-1">
+            <BookOpen className="w-6 h-6 text-primary" />
+            <span className="text-xl font-bold text-foreground">BloomBuddy</span>
           </div>
           
-          {/* Mobile Navigation Button */}
-          <button 
-            className="md:hidden"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            {isMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
-          </button>
+          <nav className="hidden md:flex items-center space-x-1">
+            <NavLink 
+              to="/" 
+              className={({ isActive }) => 
+                `px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors ${
+                  isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                }`
+              }
+            >
+              <div className="flex items-center">
+                <Home className="w-4 h-4 mr-1" />
+                Home
+              </div>
+            </NavLink>
+            
+            <NavLink 
+              to="/questions" 
+              className={({ isActive }) => 
+                `px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors ${
+                  isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                }`
+              }
+            >
+              <div className="flex items-center">
+                <FileQuestion className="w-4 h-4 mr-1" />
+                Questions
+              </div>
+            </NavLink>
+            
+            <NavLink 
+              to="/syllabus" 
+              className={({ isActive }) => 
+                `px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors ${
+                  isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                }`
+              }
+            >
+              <div className="flex items-center">
+                <BookOpen className="w-4 h-4 mr-1" />
+                Syllabus
+              </div>
+            </NavLink>
+            
+            <NavLink 
+              to="/document-analyzer" 
+              className={({ isActive }) => 
+                `px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors ${
+                  isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                }`
+              }
+            >
+              <div className="flex items-center">
+                <FileText className="w-4 h-4 mr-1" />
+                Document Analyzer
+              </div>
+            </NavLink>
+            
+            <NavLink 
+              to="/about" 
+              className={({ isActive }) => 
+                `px-3 py-2 rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors ${
+                  isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                }`
+              }
+            >
+              <div className="flex items-center">
+                <HelpCircle className="w-4 h-4 mr-1" />
+                About
+              </div>
+            </NavLink>
+          </nav>
+          
+          <div className="flex items-center space-x-4">
+            <Button variant="default">Sign In</Button>
+          </div>
         </div>
-        
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="md:hidden mt-4 py-2 animate-slide-in">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={`block py-2 transition-all duration-200 ${
-                  isActive(link.path)
-                    ? 'text-primary font-medium'
-                    : 'text-foreground hover:text-primary'
-                }`}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {link.name}
-              </Link>
-            ))}
-          </div>
-        )}
       </div>
-    </nav>
+    </header>
   );
 };
 

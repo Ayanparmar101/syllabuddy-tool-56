@@ -9,6 +9,7 @@ import Footer from "@/components/Footer";
 import Index from "@/pages/Index";
 import QuestionsPage from "@/pages/QuestionsPage";
 import SyllabusPage from "@/pages/SyllabusPage";
+import DocumentAnalyzerPage from "@/pages/DocumentAnalyzerPage";
 import AboutPage from "@/pages/AboutPage";
 import NotFound from "@/pages/NotFound";
 
@@ -27,6 +28,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/questions" element={<QuestionsPage />} />
               <Route path="/syllabus" element={<SyllabusPage />} />
+              <Route path="/document-analyzer" element={<DocumentAnalyzerPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
