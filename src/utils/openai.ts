@@ -3,9 +3,9 @@
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from "@/integrations/supabase/client";
 import * as pdfjsLib from 'pdfjs-dist';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.entry';
 
 // Set up the PDF.js worker
-const pdfjsWorker = `https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.js`;
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 export interface AnalyzedQuestion {
