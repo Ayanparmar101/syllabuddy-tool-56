@@ -5,12 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import * as pdfjsLib from 'pdfjs-dist';
 
 // Set up the PDF.js worker
-// Different versions of pdfjs-dist have different worker paths
-// For version 4.x.x
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.js',
-  import.meta.url
-).toString();
+// The worker needs to be imported directly to ensure it's bundled correctly
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`;
 
 export interface AnalyzedQuestion {
   id: string;
@@ -674,4 +670,3 @@ export const storeQuestionsInDatabase = async (
     throw error;
   }
 };
-
