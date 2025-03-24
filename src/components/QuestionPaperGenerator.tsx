@@ -19,6 +19,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { downloadQuestionPaper } from '@/utils/docxGenerator';
 import type { QuestionItem } from '@/hooks/useQuestionDatabase';
 
@@ -161,39 +162,41 @@ const QuestionPaperGenerator: React.FC<QuestionPaperGeneratorProps> = ({ questio
           </div>
         </div>
         
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[50px]"></TableHead>
-              <TableHead>Question</TableHead>
-              <TableHead>Bloom's Level</TableHead>
-              <TableHead className="w-[100px]">Marks</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {questions.length === 0 ? (
+        <ScrollArea className="h-[400px]">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
-                  No questions available in the database
-                </TableCell>
+                <TableHead className="w-[50px]"></TableHead>
+                <TableHead>Question</TableHead>
+                <TableHead>Bloom's Level</TableHead>
+                <TableHead className="w-[100px]">Marks</TableHead>
               </TableRow>
-            ) : (
-              questions.map((question) => (
-                <TableRow key={question.id}>
-                  <TableCell>
-                    <Checkbox 
-                      checked={selectedQuestions.includes(question.id)}
-                      onCheckedChange={() => handleSelectQuestion(question.id)}
-                    />
+            </TableHeader>
+            <TableBody>
+              {questions.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                    No questions available in the database
                   </TableCell>
-                  <TableCell className="font-medium">{question.text}</TableCell>
-                  <TableCell className="capitalize">{question.bloom_level}</TableCell>
-                  <TableCell>{question.marks}</TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                questions.map((question) => (
+                  <TableRow key={question.id}>
+                    <TableCell>
+                      <Checkbox 
+                        checked={selectedQuestions.includes(question.id)}
+                        onCheckedChange={() => handleSelectQuestion(question.id)}
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium">{question.text}</TableCell>
+                    <TableCell className="capitalize">{question.bloom_level}</TableCell>
+                    <TableCell>{question.marks}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </ScrollArea>
       </div>
 
       <Button 
