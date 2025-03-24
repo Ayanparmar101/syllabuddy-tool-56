@@ -173,7 +173,8 @@ const DocumentAnalyzerPage = () => {
             description: "Analyzing the extracted PDF text with GPT-4o. This may take a moment.",
           });
           
-          const result = await analyzeDocumentWithGPT(pdfText, apiKey, file.name);
+          // Remove the await storeQuestionsInSupabase call from the analyzeDocumentWithGPT function
+          const result = await analyzeDocumentWithGPT(pdfText, apiKey, file.name, false);
           setCategorizedQuestions(result);
           
           const totalQuestions = Object.values(result).flat().length;
@@ -198,7 +199,8 @@ const DocumentAnalyzerPage = () => {
           });
           
           try {
-            const result = await analyzePDFWithGPTVision(file, apiKey);
+            // Pass false to skip automatic database storage
+            const result = await analyzePDFWithGPTVision(file, apiKey, false);
             setCategorizedQuestions(result);
             
             const totalQuestions = Object.values(result).flat().length;
@@ -231,7 +233,8 @@ const DocumentAnalyzerPage = () => {
         const mockContent = "This is sample Word document content extracted for analysis. What is the capital of France? How would you explain photosynthesis? Can you apply the Pythagorean theorem to solve this problem? Analyze the causes of World War II. Do you think climate change is a significant threat? How would you design a more efficient public transportation system?";
         
         setExtractedText(mockContent);
-        const result = await analyzeDocumentWithGPT(mockContent, apiKey, file.name);
+        // Pass false to skip automatic database storage
+        const result = await analyzeDocumentWithGPT(mockContent, apiKey, file.name, false);
         setCategorizedQuestions(result);
         
         toast({
@@ -242,7 +245,8 @@ const DocumentAnalyzerPage = () => {
       else {
         const content = await readFileContent(file);
         setExtractedText(content);
-        const result = await analyzeDocumentWithGPT(content, apiKey, file.name);
+        // Pass false to skip automatic database storage
+        const result = await analyzeDocumentWithGPT(content, apiKey, file.name, false);
         setCategorizedQuestions(result);
         
         const totalQuestions = Object.values(result).flat().length;
@@ -261,7 +265,9 @@ const DocumentAnalyzerPage = () => {
         }
       }
 
-      await loadStoredQuestions();
+      // Save the document information to Supabase (without saving questions)
+      await saveDocumentToSupabase(file.name, file.type);
+      
       await loadDocuments();
     } catch (err) {
       console.error('Error analyzing document:', err);
@@ -276,6 +282,32 @@ const DocumentAnalyzerPage = () => {
     }
   };
 
+  // Add a function to save document information to Supabase
+  const saveDocumentToSupabase = async (fileName: string, fileType: string): Promise<string> => {
+    try {
+      const { data, error } = await supabase
+        .from('documents')
+        .insert({
+          title: fileName,
+          file_type: fileType,
+          file_url: 'local',
+          created_at: new Date().toISOString()
+        })
+        .select('id')
+        .single();
+      
+      if (error) {
+        console.error('Error saving document to Supabase:', error);
+        return '';
+      }
+      
+      return data.id;
+    } catch (error) {
+      console.error('Supabase error:', error);
+      return '';
+    }
+  };
+
   const addToQuestionBank = async (question: Question) => {
     try {
       const { error } = await supabase
@@ -284,7 +316,8 @@ const DocumentAnalyzerPage = () => {
           text: question.text,
           bloom_level: question.bloomLevel,
           created_at: new Date().toISOString(),
-          keywords: []
+          keywords: [],
+          document_id: null // We don't have document ID here, but could be added
         });
       
       if (error) {

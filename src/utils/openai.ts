@@ -1,4 +1,3 @@
-
 // OpenAI integration utility functions
 
 import { v4 as uuidv4 } from 'uuid';
@@ -81,7 +80,8 @@ export const extractTextFromPDF = async (file: File): Promise<string> => {
 export const analyzeDocumentWithGPT = async (
   content: string, 
   apiKey: string, 
-  documentName?: string
+  documentName?: string,
+  storeInDatabase: boolean = true
 ): Promise<CategorizedQuestions> => {
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -190,8 +190,10 @@ export const analyzeDocumentWithGPT = async (
       });
     }
     
-    // Store the questions in Supabase
-    await storeQuestionsInSupabase(categorized);
+    // Only store questions in Supabase if explicitly requested
+    if (storeInDatabase) {
+      await storeQuestionsInSupabase(categorized);
+    }
     
     return categorized;
   } catch (error) {
@@ -292,7 +294,8 @@ const pdfPageToDataURL = async (pdfData: ArrayBuffer, pageNum: number = 1): Prom
  */
 async function analyzeAllPDFPages(
   pdfArrayBuffer: ArrayBuffer,
-  apiKey: string
+  apiKey: string,
+  storeInDatabase: boolean = true
 ): Promise<CategorizedQuestions> {
   // Get total number of pages from the PDF
   const loadingTask = pdfjsLib.getDocument({ data: pdfArrayBuffer });
@@ -514,7 +517,8 @@ function mergeCategorizedQuestions(
  */
 export const analyzePDFWithGPTVision = async (
   file: File, 
-  apiKey: string
+  apiKey: string,
+  storeInDatabase: boolean = true
 ): Promise<CategorizedQuestions> => {
   try {
     // Remove the validation that checks if API key starts with 'sk-'
@@ -527,11 +531,14 @@ export const analyzePDFWithGPTVision = async (
     // Read the PDF file as ArrayBuffer
     const pdfArrayBuffer = await file.arrayBuffer();
     
-    // Process all pages of the PDF
-    const categorized = await analyzeAllPDFPages(pdfArrayBuffer, apiKey);
+    // Process all pages of the PDF, passing the storeInDatabase parameter
+    const categorized = await analyzeAllPDFPages(pdfArrayBuffer, apiKey, storeInDatabase);
     
-    // Save the document to Supabase
-    const documentId = await saveDocumentToSupabase(file.name, file.type, new Date().toISOString());
+    // Save the document to Supabase if we're storing in the database
+    let documentId = '';
+    if (storeInDatabase) {
+      documentId = await saveDocumentToSupabase(file.name, file.type, new Date().toISOString());
+    }
     
     // Add document name to all questions
     Object.keys(categorized).forEach(category => {
@@ -540,8 +547,10 @@ export const analyzePDFWithGPTVision = async (
       });
     });
     
-    // Store the questions in Supabase with document reference
-    await storeQuestionsInSupabase(categorized, documentId);
+    // Store the questions in Supabase with document reference if requested
+    if (storeInDatabase && documentId) {
+      await storeQuestionsInSupabase(categorized, documentId);
+    }
     
     return categorized;
   } catch (error) {
@@ -822,3 +831,4 @@ export const storeQuestionsInDatabase = async (
     throw error;
   }
 };
+
