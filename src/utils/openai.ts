@@ -125,6 +125,11 @@ export const analyzePDFWithGPTVision = async (
   apiKey: string
 ): Promise<CategorizedQuestions> => {
   try {
+    // Validate API key format first
+    if (!apiKey.startsWith('sk-')) {
+      throw new Error('Invalid API key format. OpenAI API keys should start with "sk-"');
+    }
+
     // For PDF files, convert to base64 and use vision capabilities
     const base64Data = await fileToBase64(file);
     
@@ -176,13 +181,32 @@ export const analyzePDFWithGPTVision = async (
       })
     });
 
+    // Detailed error handling
     if (!response.ok) {
       const errorData = await response.json();
       console.error('OpenAI Vision API error response:', errorData);
-      throw new Error(`API error: ${response.status}`);
+      
+      // Handle specific error cases
+      if (response.status === 401) {
+        throw new Error('Authentication error: Invalid API key or expired token');
+      } else if (response.status === 403) {
+        throw new Error('Authorization error: You don\'t have permission to use the GPT-4o model. Please check your OpenAI account');
+      } else if (response.status === 429) {
+        throw new Error('Rate limit exceeded: You\'ve reached your API usage limits or quotes');
+      } else if (errorData.error && errorData.error.message) {
+        throw new Error(`OpenAI API error: ${errorData.error.message}`);
+      } else {
+        throw new Error(`API error: ${response.status}`);
+      }
     }
 
     const data = await response.json();
+    
+    // Make sure we have the expected response format
+    if (!data.choices || !data.choices[0] || !data.choices[0].message || !data.choices[0].message.content) {
+      throw new Error('Invalid response format from OpenAI API');
+    }
+    
     const result = JSON.parse(data.choices[0].message.content);
     
     // Transform the result into our expected format with timestamps
@@ -231,7 +255,25 @@ export const analyzePDFWithGPTVision = async (
     return categorized;
   } catch (error) {
     console.error('PDF processing error:', error);
-    throw new Error(`PDF analysis failed: ${error.message}. Please ensure your API key is valid and has access to the GPT-4o model.`);
+    
+    // Provide more helpful error messages
+    let errorMessage = 'PDF analysis failed';
+    
+    if (error.message.includes('Invalid API key format')) {
+      errorMessage = `${errorMessage}: ${error.message}. Please provide a valid OpenAI API key`;
+    } else if (error.message.includes('Authentication error')) {
+      errorMessage = `${errorMessage}: ${error.message}. Please verify your API key`;
+    } else if (error.message.includes('Authorization error')) {
+      errorMessage = `${errorMessage}: ${error.message}. Please ensure your OpenAI account has access to GPT-4o`;
+    } else if (error.message.includes('Rate limit exceeded')) {
+      errorMessage = `${errorMessage}: ${error.message}. Please try again later`;
+    } else if (error.message.includes('OpenAI API error')) {
+      errorMessage = `${errorMessage}: ${error.message}`;
+    } else {
+      errorMessage = `${errorMessage}: ${error.message}`;
+    }
+    
+    throw new Error(errorMessage);
   }
 };
 

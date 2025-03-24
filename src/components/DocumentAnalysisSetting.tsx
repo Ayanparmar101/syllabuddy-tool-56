@@ -34,6 +34,7 @@ const DocumentAnalysisSetting: React.FC<DocumentAnalysisSettingProps> = ({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [clearQuestions, setClearQuestions] = useState(true);
   const [clearDocuments, setClearDocuments] = useState(true);
+  const [isValidatingKey, setIsValidatingKey] = useState(false);
 
   const handleDeleteData = async () => {
     try {
@@ -91,50 +92,149 @@ const DocumentAnalysisSetting: React.FC<DocumentAnalysisSettingProps> = ({
     // OpenAI API keys typically start with "sk-" and are 51 characters long
     return /^sk-[a-zA-Z0-9]{48}$/.test(key) || 
            // Handle project API keys which may have a different format
-           /^sk-proj-[a-zA-Z0-9-]{36,100}$/.test(key);
+           /^sk-[a-zA-Z0-9-_]{32,100}$/.test(key);
+  };
+
+  // Validate the API key against OpenAI
+  const validateApiKey = async () => {
+    if (!apiKey || !isValidApiKeyFormat(apiKey)) {
+      return false;
+    }
+
+    setIsValidatingKey(true);
+    
+    try {
+      // Make a lightweight call to OpenAI API to validate the key
+      const response = await fetch('https://api.openai.com/v1/models', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        // Check if GPT-4o is available in the models list
+        const hasGpt4o = result.data && result.data.some(model => 
+          model.id.includes('gpt-4o') || model.id.includes('gpt-4-o')
+        );
+        
+        if (hasGpt4o) {
+          toast({
+            title: "API Key Valid",
+            description: "Your OpenAI API key has been verified and has access to GPT-4o.",
+          });
+          return true;
+        } else {
+          toast({
+            variant: "destructive",
+            title: "API Key Valid, but Limited Access",
+            description: "Your API key is valid but may not have access to GPT-4o models required for PDF analysis.",
+          });
+          return false;
+        }
+      } else {
+        if (response.status === 401) {
+          toast({
+            variant: "destructive",
+            title: "Invalid API Key",
+            description: "The provided API key is not valid.",
+          });
+        } else {
+          toast({
+            variant: "destructive",
+            title: "API Validation Error",
+            description: result.error?.message || "Could not validate the API key.",
+          });
+        }
+        return false;
+      }
+    } catch (error) {
+      console.error("Error validating API key:", error);
+      toast({
+        variant: "destructive",
+        title: "Connection Error",
+        description: "Could not connect to OpenAI API to validate the key.",
+      });
+      return false;
+    } finally {
+      setIsValidatingKey(false);
+    }
+  };
+
+  // Handle API key change
+  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newKey = e.target.value;
+    setApiKey(newKey);
+  };
+
+  // Handle API key save and validation
+  const handleSaveApiKey = async () => {
+    if (isValidApiKeyFormat(apiKey)) {
+      const isValid = await validateApiKey();
+      if (isValid) {
+        localStorage.setItem('openai-api-key', apiKey);
+      }
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Invalid API Key Format",
+        description: "The API key doesn't match the expected format. Please check and try again.",
+      });
+    }
   };
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <Label htmlFor="api-key">OpenAI API Key</Label>
-        <div className="flex">
-          <Input
-            id="api-key"
-            type={showApiKey ? 'text' : 'password'}
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="Enter your OpenAI API key"
-            className={`font-mono pr-10 ${apiKey && !isValidApiKeyFormat(apiKey) ? 'border-red-500' : ''}`}
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="ml-[-40px]"
-            onClick={() => setShowApiKey(!showApiKey)}
+        <div className="flex gap-2">
+          <div className="relative flex-grow">
+            <Input
+              id="api-key"
+              type={showApiKey ? 'text' : 'password'}
+              value={apiKey}
+              onChange={handleApiKeyChange}
+              placeholder="Enter your OpenAI API key"
+              className={`font-mono pr-10 ${apiKey && !isValidApiKeyFormat(apiKey) ? 'border-red-500' : ''}`}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="absolute right-0 top-0 h-full"
+              onClick={() => setShowApiKey(!showApiKey)}
+            >
+              {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
+          </div>
+          <Button 
+            onClick={handleSaveApiKey} 
+            disabled={!apiKey || isValidatingKey || !isValidApiKeyFormat(apiKey)}
           >
-            {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {isValidatingKey ? 'Validating...' : 'Validate & Save'}
           </Button>
         </div>
         {apiKey && !isValidApiKeyFormat(apiKey) && (
           <p className="text-sm text-red-500 mt-1">
-            This doesn't appear to be a valid OpenAI API key format
+            This doesn't appear to be a valid OpenAI API key format. API keys should start with "sk-"
           </p>
         )}
         <p className="text-sm text-muted-foreground">
-          Your API key is required to analyze documents. It is only stored in your browser and never sent to our servers.
+          Your API key is required to analyze documents. It is stored in your browser and never sent to our servers.
         </p>
 
         <Alert className="mt-4 bg-blue-50 border-blue-200">
           <Info className="h-4 w-4 text-blue-500" />
           <AlertDescription className="text-sm text-blue-600">
-            <p className="font-medium">Document Analysis Capabilities:</p>
+            <p className="font-medium">Document Analysis Requirements:</p>
             <ul className="list-disc pl-5 mt-1 space-y-1">
               <li>PDFs are processed using GPT-4o's advanced vision capabilities</li>
-              <li>All questions from PDFs are now accurately extracted and categorized</li>
-              <li>All questions are automatically saved to your Supabase database</li>
-              <li>Make sure your OpenAI API key has access to the GPT-4o model</li>
+              <li>Your OpenAI API key <strong>must have access</strong> to the GPT-4o model</li>
+              <li>Paid OpenAI account required (Free trial credits may not work)</li>
+              <li>PDF processing may take longer for large documents</li>
             </ul>
           </AlertDescription>
         </Alert>
