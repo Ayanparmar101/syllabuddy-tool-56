@@ -1,3 +1,4 @@
+
 // OpenAI integration utility functions
 
 import { v4 as uuidv4 } from 'uuid';
@@ -516,9 +517,9 @@ export const analyzePDFWithGPTVision = async (
   apiKey: string
 ): Promise<CategorizedQuestions> => {
   try {
-    // Validate API key format first
-    if (!apiKey.startsWith('sk-')) {
-      throw new Error('Invalid API key format. OpenAI API keys should start with "sk-"');
+    // Remove the validation that checks if API key starts with 'sk-'
+    if (!apiKey || apiKey.trim().length < 20) {
+      throw new Error('Please provide a valid API key');
     }
 
     console.log("Processing PDF document using GPT-4o vision capabilities");
@@ -549,8 +550,8 @@ export const analyzePDFWithGPTVision = async (
     // Provide more helpful error messages
     let errorMessage = 'PDF analysis failed';
     
-    if (error.message.includes('Invalid API key format')) {
-      errorMessage = `${errorMessage}: ${error.message}. Please provide a valid OpenAI API key`;
+    if (error.message.includes('Please provide a valid API key')) {
+      errorMessage = `${errorMessage}: ${error.message}`;
     } else if (error.message.includes('Authentication error')) {
       errorMessage = `${errorMessage}: ${error.message}. Please verify your API key`;
     } else if (error.message.includes('Authorization error')) {

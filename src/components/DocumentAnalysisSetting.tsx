@@ -84,8 +84,7 @@ const DocumentAnalysisSetting: React.FC<DocumentAnalysisSettingProps> = ({
   };
 
   const isValidApiKeyFormat = (key: string) => {
-    return /^sk-[a-zA-Z0-9]{48}$/.test(key) || 
-           /^sk-[a-zA-Z0-9-_]{32,100}$/.test(key);
+    return key && key.trim().length >= 20;
   };
 
   const validateApiKey = async () => {
@@ -169,7 +168,7 @@ const DocumentAnalysisSetting: React.FC<DocumentAnalysisSettingProps> = ({
       toast({
         variant: "destructive",
         title: "Invalid API Key Format",
-        description: "The API key doesn't match the expected format. Please check and try again.",
+        description: "Please provide a valid API key with at least 20 characters.",
       });
     }
   };
@@ -207,7 +206,7 @@ const DocumentAnalysisSetting: React.FC<DocumentAnalysisSettingProps> = ({
         </div>
         {apiKey && !isValidApiKeyFormat(apiKey) && (
           <p className="text-sm text-red-500 mt-1">
-            This doesn't appear to be a valid OpenAI API key format. API keys should start with "sk-"
+            Please enter a valid API key with at least 20 characters.
           </p>
         )}
         <p className="text-sm text-muted-foreground">
