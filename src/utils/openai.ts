@@ -165,28 +165,74 @@ const pdfPageToDataURL = async (pdfData: ArrayBuffer, pageNum: number = 1): Prom
 };
 
 /**
- * Analyze PDF document using OpenAI's GPT-4o Vision capabilities
- * This function now converts the PDF to images before sending to OpenAI
+ * Analyze all pages of a PDF using OpenAI's GPT-4o Vision capabilities
  */
-export const analyzePDFWithGPTVision = async (
-  file: File, 
+async function analyzeAllPDFPages(
+  pdfArrayBuffer: ArrayBuffer,
   apiKey: string
-): Promise<CategorizedQuestions> => {
-  try {
-    // Validate API key format first
-    if (!apiKey.startsWith('sk-')) {
-      throw new Error('Invalid API key format. OpenAI API keys should start with "sk-"');
+): Promise<CategorizedQuestions> {
+  // Get total number of pages from the PDF
+  const loadingTask = pdfjsLib.getDocument({ data: pdfArrayBuffer });
+  const pdf = await loadingTask.promise;
+  const totalPages = pdf.numPages;
+  
+  console.log(`Processing PDF with ${totalPages} pages`);
+  
+  // Define max pages to process to avoid excessive API calls
+  const MAX_PAGES_TO_PROCESS = 10;
+  const pagesToProcess = Math.min(totalPages, MAX_PAGES_TO_PROCESS);
+  
+  // Process pages in batches to avoid overwhelming the GPU or API
+  const BATCH_SIZE = 3;
+  const allResults: CategorizedQuestions = {};
+  
+  // Show a message if we're limiting the pages
+  if (totalPages > MAX_PAGES_TO_PROCESS) {
+    console.log(`PDF has ${totalPages} pages. For performance reasons, only processing the first ${MAX_PAGES_TO_PROCESS} pages.`);
+  }
+  
+  // Process pages in batches
+  for (let batchStart = 0; batchStart < pagesToProcess; batchStart += BATCH_SIZE) {
+    const batchEnd = Math.min(batchStart + BATCH_SIZE, pagesToProcess);
+    const batchPromises = [];
+    
+    // Create promises for each page in the batch
+    for (let pageNum = batchStart + 1; pageNum <= batchEnd; pageNum++) {
+      batchPromises.push(analyzePDFPage(pdfArrayBuffer, pageNum, apiKey));
     }
+    
+    // Wait for all pages in the batch to finish processing
+    const batchResults = await Promise.all(batchPromises);
+    
+    // Merge batch results into the overall results
+    batchResults.forEach(pageResult => {
+      mergeCategorizedQuestions(allResults, pageResult);
+    });
+    
+    // Small delay between batches to avoid rate limiting
+    if (batchEnd < pagesToProcess) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  }
+  
+  return allResults;
+}
 
-    console.log("Processing PDF document using GPT-4o vision capabilities");
+/**
+ * Analyze a single PDF page using OpenAI's GPT-4o Vision
+ */
+async function analyzePDFPage(
+  pdfArrayBuffer: ArrayBuffer,
+  pageNum: number,
+  apiKey: string
+): Promise<CategorizedQuestions> {
+  console.log(`Processing page ${pageNum}...`);
+  
+  try {
+    // Convert the PDF page to an image
+    const pdfImageDataUrl = await pdfPageToDataURL(pdfArrayBuffer, pageNum);
     
-    // Read the PDF file as ArrayBuffer
-    const pdfArrayBuffer = await file.arrayBuffer();
-    
-    // Convert the first page of the PDF to an image
-    const pdfImageDataUrl = await pdfPageToDataURL(pdfArrayBuffer);
-    
-    // Extract the base64 data (remove the data:image/png;base64, prefix)
+    // Extract the base64 data
     const base64Image = pdfImageDataUrl.split(',')[1];
     
     // Send the image to OpenAI
@@ -212,14 +258,16 @@ export const analyzePDFWithGPTVision = async (
             Evaluate: Questions that ask students to present and defend opinions. Keywords: evaluate, argue, defend, judge, select, support, value, critique.
             Create: Questions that ask students to compile information in a different way. Keywords: create, design, develop, formulate, construct, plan, produce.
             
-            Please extract all questions from the document and categorize them. Format your response as a JSON object with Bloom's levels as keys and arrays of questions as values.`
+            Please extract all questions from the document and categorize them. Format your response as a JSON object with Bloom's levels as keys and arrays of questions as values.
+            
+            This is page ${pageNum} of a multi-page document. Focus only on extracting questions from this specific page.`
           },
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: `Please analyze this PDF document image and extract all questions, categorizing them by Bloom's Taxonomy levels.`
+                text: `Please analyze this PDF page image and extract all questions, categorizing them by Bloom's Taxonomy levels.`
               },
               {
                 type: 'image_url',
@@ -236,40 +284,18 @@ export const analyzePDFWithGPTVision = async (
       })
     });
 
-    // Detailed error handling
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('OpenAI Vision API error response:', errorData);
-      
-      // Handle specific error cases
-      if (response.status === 401) {
-        throw new Error('Authentication error: Invalid API key or expired token');
-      } else if (response.status === 403) {
-        throw new Error('Authorization error: You don\'t have permission to use the GPT-4o model. Please check your OpenAI account');
-      } else if (response.status === 429) {
-        throw new Error('Rate limit exceeded: You\'ve reached your API usage limits or quotes');
-      } else if (errorData.error && errorData.error.message) {
-        throw new Error(`OpenAI API error: ${errorData.error.message}`);
-      } else {
-        throw new Error(`API error: ${response.status}`);
-      }
+      console.error(`OpenAI Vision API error on page ${pageNum}:`, errorData);
+      throw new Error(`API error: ${response.status}`);
     }
 
     const data = await response.json();
-    
-    // Make sure we have the expected response format
-    if (!data.choices || !data.choices[0] || !data.choices[0].message || !data.choices[0].message.content) {
-      throw new Error('Invalid response format from OpenAI API');
-    }
-    
     const result = JSON.parse(data.choices[0].message.content);
     
     // Transform the result into our expected format with timestamps
     const categorized: CategorizedQuestions = {};
     const currentDate = new Date().toISOString();
-    
-    // Save the document to Supabase
-    const documentId = await saveDocumentToSupabase(file.name, file.type, currentDate);
     
     // Process each category in the response
     Object.keys(result).forEach(category => {
@@ -281,14 +307,13 @@ export const analyzePDFWithGPTVision = async (
       
       // If the result has an array of questions
       if (Array.isArray(result[category])) {
-        result[category].forEach((question: string | {text: string, confidence?: number}, index: number) => {
+        result[category].forEach((question: string | {text: string, confidence?: number}) => {
           if (typeof question === 'string') {
             categorized[bloomLevel].push({
               id: uuidv4(),
               text: question,
               bloomLevel: bloomLevel,
-              createdAt: currentDate,
-              documentName: file.name
+              createdAt: currentDate
             });
           } else if (typeof question === 'object' && question.text) {
             categorized[bloomLevel].push({
@@ -296,12 +321,71 @@ export const analyzePDFWithGPTVision = async (
               text: question.text,
               bloomLevel: bloomLevel,
               confidence: question.confidence,
-              createdAt: currentDate,
-              documentName: file.name
+              createdAt: currentDate
             });
           }
         });
       }
+    });
+    
+    console.log(`Page ${pageNum} processed successfully, found ${Object.values(categorized).flat().length} questions`);
+    return categorized;
+  } catch (error) {
+    console.error(`Error processing page ${pageNum}:`, error);
+    // Return empty result for this page, but don't fail the entire process
+    return {};
+  }
+}
+
+/**
+ * Helper function to merge multiple categorized question sets
+ */
+function mergeCategorizedQuestions(
+  target: CategorizedQuestions,
+  source: CategorizedQuestions
+): void {
+  // For each category in the source
+  Object.keys(source).forEach(category => {
+    // If the category doesn't exist in the target, create it
+    if (!target[category]) {
+      target[category] = [];
+    }
+    
+    // Add all questions from this category to the target
+    target[category].push(...source[category]);
+  });
+}
+
+/**
+ * Analyze PDF document using OpenAI's GPT-4o Vision capabilities
+ * This function now processes multiple pages of the PDF
+ */
+export const analyzePDFWithGPTVision = async (
+  file: File, 
+  apiKey: string
+): Promise<CategorizedQuestions> => {
+  try {
+    // Validate API key format first
+    if (!apiKey.startsWith('sk-')) {
+      throw new Error('Invalid API key format. OpenAI API keys should start with "sk-"');
+    }
+
+    console.log("Processing PDF document using GPT-4o vision capabilities");
+    
+    // Read the PDF file as ArrayBuffer
+    const pdfArrayBuffer = await file.arrayBuffer();
+    
+    // Process all pages of the PDF
+    const categorized = await analyzeAllPDFPages(pdfArrayBuffer, apiKey);
+    
+    // Save the document to Supabase
+    const documentId = await saveDocumentToSupabase(file.name, file.type, new Date().toISOString());
+    
+    // Add document name to all questions
+    Object.keys(categorized).forEach(category => {
+      categorized[category].forEach(question => {
+        question.documentName = file.name;
+      });
     });
     
     // Store the questions in Supabase with document reference

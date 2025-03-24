@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -39,11 +38,10 @@ const DocumentAnalysisSetting: React.FC<DocumentAnalysisSettingProps> = ({
   const handleDeleteData = async () => {
     try {
       if (clearQuestions) {
-        // Clear questions from Supabase
         const { error: questionsError } = await supabase
           .from('questions')
           .delete()
-          .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
+          .neq('id', '00000000-0000-0000-0000-000000000000');
         
         if (questionsError) {
           throw questionsError;
@@ -51,18 +49,16 @@ const DocumentAnalysisSetting: React.FC<DocumentAnalysisSettingProps> = ({
       }
       
       if (clearDocuments) {
-        // Clear documents from Supabase
         const { error: documentsError } = await supabase
           .from('documents')
           .delete()
-          .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
+          .neq('id', '00000000-0000-0000-0000-000000000000');
         
         if (documentsError) {
           throw documentsError;
         }
       }
       
-      // For backward compatibility, also clear IndexedDB
       const request = indexedDB.deleteDatabase('bloombuddy-db');
       
       request.onsuccess = () => {
@@ -87,15 +83,11 @@ const DocumentAnalysisSetting: React.FC<DocumentAnalysisSettingProps> = ({
     }
   };
 
-  // Simple validation to check if the API key follows OpenAI's format
   const isValidApiKeyFormat = (key: string) => {
-    // OpenAI API keys typically start with "sk-" and are 51 characters long
     return /^sk-[a-zA-Z0-9]{48}$/.test(key) || 
-           // Handle project API keys which may have a different format
            /^sk-[a-zA-Z0-9-_]{32,100}$/.test(key);
   };
 
-  // Validate the API key against OpenAI
   const validateApiKey = async () => {
     if (!apiKey || !isValidApiKeyFormat(apiKey)) {
       return false;
@@ -104,7 +96,6 @@ const DocumentAnalysisSetting: React.FC<DocumentAnalysisSettingProps> = ({
     setIsValidatingKey(true);
     
     try {
-      // Make a lightweight call to OpenAI API to validate the key
       const response = await fetch('https://api.openai.com/v1/models', {
         method: 'GET',
         headers: {
@@ -116,7 +107,6 @@ const DocumentAnalysisSetting: React.FC<DocumentAnalysisSettingProps> = ({
       const result = await response.json();
       
       if (response.ok) {
-        // Check if GPT-4o is available in the models list
         const hasGpt4o = result.data && result.data.some(model => 
           model.id.includes('gpt-4o') || model.id.includes('gpt-4-o')
         );
@@ -164,13 +154,11 @@ const DocumentAnalysisSetting: React.FC<DocumentAnalysisSettingProps> = ({
     }
   };
 
-  // Handle API key change
   const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newKey = e.target.value;
     setApiKey(newKey);
   };
 
-  // Handle API key save and validation
   const handleSaveApiKey = async () => {
     if (isValidApiKeyFormat(apiKey)) {
       const isValid = await validateApiKey();
@@ -232,9 +220,10 @@ const DocumentAnalysisSetting: React.FC<DocumentAnalysisSettingProps> = ({
             <p className="font-medium">Document Analysis Requirements:</p>
             <ul className="list-disc pl-5 mt-1 space-y-1">
               <li>PDFs are processed using GPT-4o's advanced vision capabilities</li>
+              <li>PDF processing now supports multiple pages (up to 10 pages per document)</li>
               <li>Your OpenAI API key <strong>must have access</strong> to the GPT-4o model</li>
               <li>Paid OpenAI account required (Free trial credits may not work)</li>
-              <li>PDF processing may take longer for large documents</li>
+              <li>Processing multi-page PDFs may take longer and use more API credits</li>
             </ul>
           </AlertDescription>
         </Alert>

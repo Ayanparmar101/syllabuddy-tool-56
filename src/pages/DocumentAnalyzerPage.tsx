@@ -48,7 +48,6 @@ const DocumentAnalyzerPage = () => {
   const [historyFilter, setHistoryFilter] = useState<string>('all');
   const [documents, setDocuments] = useState<{id: string, title: string}[]>([]);
 
-  // Load API key from localStorage on component mount
   useEffect(() => {
     const savedApiKey = localStorage.getItem('openai-api-key');
     if (savedApiKey) {
@@ -58,7 +57,6 @@ const DocumentAnalyzerPage = () => {
     loadDocuments();
   }, []);
 
-  // Load documents from Supabase
   const loadDocuments = async () => {
     try {
       const { data, error } = await supabase
@@ -77,7 +75,6 @@ const DocumentAnalyzerPage = () => {
     }
   };
 
-  // Load stored questions from the database
   const loadStoredQuestions = async () => {
     setIsLoadingHistory(true);
     try {
@@ -91,7 +88,6 @@ const DocumentAnalyzerPage = () => {
     }
   };
 
-  // Save API key to localStorage when it changes
   useEffect(() => {
     if (apiKey) {
       localStorage.setItem('openai-api-key', apiKey);
@@ -135,21 +131,24 @@ const DocumentAnalyzerPage = () => {
     setError(null);
 
     try {
-      // For PDFs, use vision capabilities
       if (file.type === 'application/pdf') {
+        toast({
+          title: "Processing PDF",
+          description: "Analyzing all pages of your PDF. This may take a moment for multi-page documents.",
+        });
+        
         const result = await analyzePDFWithGPTVision(file, apiKey);
         setCategorizedQuestions(result);
         
+        const totalQuestions = Object.values(result).flat().length;
+        
         toast({
           title: "PDF Analysis Complete",
-          description: "The PDF has been analyzed using OCR and questions have been categorized.",
+          description: `Successfully analyzed PDF and found ${totalQuestions} questions across all pages.`,
         });
       } 
-      // For Word documents (would need a proper parser in production)
       else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
                 file.type === 'application/msword') {
-        // In a full implementation, we would use a Word parser library
-        // For this demo, extract sample content or show a message
         const mockContent = "This is sample Word document content extracted for analysis. What is the capital of France? How would you explain photosynthesis? Can you apply the Pythagorean theorem to solve this problem? Analyze the causes of World War II. Do you think climate change is a significant threat? How would you design a more efficient public transportation system?";
         
         setExtractedText(mockContent);
@@ -161,7 +160,6 @@ const DocumentAnalyzerPage = () => {
           description: "The Word document content has been analyzed and questions have been categorized.",
         });
       } 
-      // For text files, read directly
       else {
         const content = await readFileContent(file);
         setExtractedText(content);
@@ -174,7 +172,6 @@ const DocumentAnalyzerPage = () => {
         });
       }
 
-      // Refresh the stored questions list and documents
       await loadStoredQuestions();
       await loadDocuments();
     } catch (err) {
@@ -210,7 +207,6 @@ const DocumentAnalyzerPage = () => {
         description: `Added "${question.text.substring(0, 30)}..." to your question bank.`,
       });
       
-      // Refresh questions
       await loadStoredQuestions();
     } catch (error) {
       console.error('Error adding question:', error);
@@ -222,27 +218,22 @@ const DocumentAnalyzerPage = () => {
     }
   };
 
-  // Filter history by document or date
   useEffect(() => {
     if (historyFilter === 'all') {
       setFilteredQuestions(formatCategorizedQuestions(allStoredQuestions));
     } else if (historyFilter === 'latest') {
-      // Sort by date and get the latest 20
       const sorted = [...allStoredQuestions].sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       ).slice(0, 20);
       setFilteredQuestions(formatCategorizedQuestions(sorted));
     } else {
-      // Filter by document name
       const filtered = allStoredQuestions.filter(q => q.documentName === historyFilter);
       setFilteredQuestions(formatCategorizedQuestions(filtered));
     }
   }, [historyFilter, allStoredQuestions]);
 
-  // Get unique document names for filter
   const documentNames = [...new Set(allStoredQuestions.map(q => q.documentName))].filter(Boolean) as string[];
 
-  // Order levels from lower to higher order thinking
   const orderedLevels: BloomLevelType[] = [
     'remember', 
     'understand', 
@@ -289,7 +280,17 @@ const DocumentAnalyzerPage = () => {
                       <div className="flex items-center text-sm">
                         <FileText className="h-4 w-4 mr-2" />
                         <span>{file.name} ({(file.size / 1024).toFixed(2)} KB)</span>
+                        {file.type === 'application/pdf' && (
+                          <span className="ml-2 text-blue-500 text-xs">
+                            Multi-page support enabled
+                          </span>
+                        )}
                       </div>
+                    )}
+                    {file && file.type === 'application/pdf' && (
+                      <p className="text-xs text-muted-foreground">
+                        PDF analysis will process up to 10 pages. For best results, ensure your PDF is clear and text-based.
+                      </p>
                     )}
                   </div>
                   
@@ -301,7 +302,7 @@ const DocumentAnalyzerPage = () => {
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Analyzing...
+                        {file && file.type === 'application/pdf' ? 'Analyzing PDF pages...' : 'Analyzing...'}
                       </>
                     ) : (
                       <>
@@ -327,7 +328,6 @@ const DocumentAnalyzerPage = () => {
             </Tabs>
           </div>
 
-          {/* History section - below the upload card */}
           <div className="bloom-card p-6 mt-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Document History</h2>
