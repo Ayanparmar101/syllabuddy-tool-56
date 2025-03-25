@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,21 +30,31 @@ interface QuestionPaperGeneratorProps {
 
 const QuestionPaperGenerator: React.FC<QuestionPaperGeneratorProps> = ({ questions }) => {
   const [selectedQuestions, setSelectedQuestions] = useState<string[]>([]);
-  const [paperTitle, setPaperTitle] = useState('Question Paper');
-  const [instructions, setInstructions] = useState('Answer all questions. Marks are indicated in brackets.');
-  const [subjectName, setSubjectName] = useState('');
-  const [courseCode, setCourseCode] = useState('');
+  const [paperTitle, setPaperTitle] = useState('DATABASE MANAGEMENT SYSTEMS');
+  const [instructions, setInstructions] = useState(
+    '1. Attempt all questions.\n2. Make suitable assumptions wherever necessary.\n3. Figures to the right indicate full marks.'
+  );
+  const [subjectName, setSubjectName] = useState('Database Management Systems');
+  const [courseCode, setCourseCode] = useState('ECSCI24202');
   const [duration, setDuration] = useState('3 hours');
   const [showSettings, setShowSettings] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [totalMarks, setTotalMarks] = useState(0);
 
+  // Bloom's level to code mapping
+  const bloomCodeMap: Record<string, string> = {
+    remember: 'R',
+    understand: 'U',
+    apply: 'A',
+    analyze: 'N',
+    evaluate: 'E',
+    create: 'C'
+  };
+
   useEffect(() => {
-    // Calculate total marks when selected questions change
     const total = questions
       .filter(q => selectedQuestions.includes(q.id))
       .reduce((sum, q) => sum + (q.marks || 0), 0);
-    
     setTotalMarks(total);
   }, [selectedQuestions, questions]);
 
@@ -78,7 +87,10 @@ const QuestionPaperGenerator: React.FC<QuestionPaperGeneratorProps> = ({ questio
     try {
       const selectedQuestionsData = questions.filter(q => 
         selectedQuestions.includes(q.id)
-      );
+      ).map(q => ({
+        ...q,
+        bloom_level: bloomCodeMap[q.bloom_level] || q.bloom_level
+      }));
 
       await downloadQuestionPaper({
         title: paperTitle,
@@ -86,7 +98,9 @@ const QuestionPaperGenerator: React.FC<QuestionPaperGeneratorProps> = ({ questio
         duration: duration,
         instructions: instructions,
         questions: selectedQuestionsData,
-        totalMarks: totalMarks
+        totalMarks: totalMarks,
+        courseCode: courseCode,
+        universityLogo: "/lovable-uploads/e77d7ec8-8fb7-4af7-afe8-d9e3f6d58b2e.png"
       });
 
       toast({
@@ -103,20 +117,9 @@ const QuestionPaperGenerator: React.FC<QuestionPaperGeneratorProps> = ({ questio
     }
   };
 
-  // Get selected questions data
   const selectedQuestionsData = questions.filter(q => 
     selectedQuestions.includes(q.id)
   );
-
-  // Group questions by Bloom's level for the preview
-  const questionsByBloomLevel = selectedQuestionsData.reduce((acc, question) => {
-    const level = question.bloom_level || 'unknown';
-    if (!acc[level]) {
-      acc[level] = [];
-    }
-    acc[level].push(question);
-    return acc;
-  }, {} as Record<string, QuestionItem[]>);
 
   return (
     <div className="space-y-6">
@@ -216,7 +219,9 @@ const QuestionPaperGenerator: React.FC<QuestionPaperGeneratorProps> = ({ questio
                       />
                     </TableCell>
                     <TableCell className="font-medium">{question.text}</TableCell>
-                    <TableCell className="capitalize">{question.bloom_level}</TableCell>
+                    <TableCell className="capitalize">
+                      {bloomCodeMap[question.bloom_level] || question.bloom_level}
+                    </TableCell>
                     <TableCell>{question.marks}</TableCell>
                   </TableRow>
                 ))
@@ -251,7 +256,6 @@ const QuestionPaperGenerator: React.FC<QuestionPaperGeneratorProps> = ({ questio
         <Card className="mt-6 border-2">
           <CardContent className="p-0">
             <div className="p-6 space-y-6">
-              {/* Header with logo */}
               <div className="flex items-center justify-center mb-6">
                 <img 
                   src="/lovable-uploads/e77d7ec8-8fb7-4af7-afe8-d9e3f6d58b2e.png" 
@@ -260,7 +264,6 @@ const QuestionPaperGenerator: React.FC<QuestionPaperGeneratorProps> = ({ questio
                 />
               </div>
 
-              {/* Paper Header Table */}
               <div className="border border-black">
                 <div className="text-center p-2 font-bold border-b border-black text-lg">
                   University Examinations – {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
@@ -274,7 +277,7 @@ const QuestionPaperGenerator: React.FC<QuestionPaperGeneratorProps> = ({ questio
                       <td className="p-2 text-center font-medium" style={{ width: '30%' }}>MAX MARKS</td>
                     </tr>
                     <tr className="border-b border-black">
-                      <td className="border-r border-black p-2 text-center">{courseCode || "XXXXXXXX"}</td>
+                      <td className="border-r border-black p-2 text-center">{courseCode || "ECSCI24202"}</td>
                       <td className="border-r border-black p-2 text-center">{paperTitle}</td>
                       <td className="p-2 text-center">{totalMarks}</td>
                     </tr>
@@ -292,7 +295,6 @@ const QuestionPaperGenerator: React.FC<QuestionPaperGeneratorProps> = ({ questio
                 </table>
               </div>
 
-              {/* Course Outcomes */}
               <div className="space-y-2">
                 <div className="font-bold">COURSE OUTCOMES:</div>
                 <ol className="list-decimal pl-6 space-y-1">
@@ -302,7 +304,6 @@ const QuestionPaperGenerator: React.FC<QuestionPaperGeneratorProps> = ({ questio
                 </ol>
               </div>
 
-              {/* Instructions */}
               <div className="space-y-2">
                 <div className="font-bold">INSTRUCTION TO THE STUDENTS:</div>
                 <ol className="list-decimal pl-6 space-y-1">
@@ -312,7 +313,6 @@ const QuestionPaperGenerator: React.FC<QuestionPaperGeneratorProps> = ({ questio
                 </ol>
               </div>
 
-              {/* Bloom's Taxonomy Table */}
               <div>
                 <div className="font-bold mb-2">BLOOM'S TAXONOMY [BT]:</div>
                 <table className="w-full border-collapse border border-black">
@@ -337,7 +337,6 @@ const QuestionPaperGenerator: React.FC<QuestionPaperGeneratorProps> = ({ questio
                 </table>
               </div>
 
-              {/* Selected Questions */}
               <div className="space-y-4">
                 <Separator />
                 <div className="font-bold">Selected Questions:</div>
@@ -351,7 +350,7 @@ const QuestionPaperGenerator: React.FC<QuestionPaperGeneratorProps> = ({ questio
                           <div className="ml-2 font-medium">[{q.marks} marks]</div>
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          Bloom's Level: <span className="capitalize">{q.bloom_level}</span>
+                          Bloom's Level: <span className="capitalize">{bloomCodeMap[q.bloom_level] || q.bloom_level}</span>
                         </div>
                       </li>
                     ))}
