@@ -1,6 +1,6 @@
 
 import { saveAs } from 'file-saver';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, ImageRun } from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, ImageRun, Table, TableRow, TableCell, WidthType, TableBorders } from 'docx';
 import type { QuestionItem } from '@/hooks/useQuestionDatabase';
 
 interface QuestionPaperOptions {
@@ -17,8 +17,8 @@ interface QuestionPaperOptions {
 export const downloadQuestionPaper = async (options: QuestionPaperOptions) => {
   const { title, subject, duration, instructions, questions, totalMarks, courseCode, universityLogo } = options;
   
-  // Create header section
-  const headerParagraphs = [];
+  // Document sections
+  const children = [];
   
   // Add logo if provided
   if (universityLogo) {
@@ -43,76 +43,366 @@ export const downloadQuestionPaper = async (options: QuestionPaperOptions) => {
         ],
       });
       
-      headerParagraphs.push(logoParagraph);
+      children.push(logoParagraph);
     } catch (error) {
       console.error('Error adding logo to document:', error);
       // Continue without the logo if there's an error
     }
   }
   
-  // Add title
-  headerParagraphs.push(
+  // Add title - "University Examinations" header
+  children.push(
     new Paragraph({
-      text: title,
-      heading: HeadingLevel.HEADING_1,
+      text: `University Examinations – ${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`,
       alignment: AlignmentType.CENTER,
-      spacing: { after: 200 }
-    })
-  );
-  
-  if (subject) {
-    headerParagraphs.push(
-      new Paragraph({
-        text: `Subject: ${subject}`,
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 100 }
-      })
-    );
-  }
-  
-  if (courseCode) {
-    headerParagraphs.push(
-      new Paragraph({
-        text: `Course Code: ${courseCode}`,
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 100 }
-      })
-    );
-  }
-  
-  if (duration) {
-    headerParagraphs.push(
-      new Paragraph({
-        text: `Duration: ${duration}`,
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 100 }
-      })
-    );
-  }
-  
-  headerParagraphs.push(
-    new Paragraph({
-      text: `Total Marks: ${totalMarks}`,
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 400 }
-    })
-  );
-  
-  // Instructions section
-  const instructionsParagraphs = [
-    new Paragraph({
-      text: 'Instructions:',
+      spacing: { after: 200 },
+      border: {
+        bottom: {
+          color: "000000",
+          space: 1,
+          style: BorderStyle.SINGLE,
+          size: 1,
+        },
+      },
       heading: HeadingLevel.HEADING_2,
-      spacing: { after: 100 }
-    }),
-    new Paragraph({
-      text: instructions,
-      spacing: { after: 400 }
     })
+  );
+  
+  // Create the course info table - matches the preview format
+  const courseInfoTable = new Table({
+    width: {
+      size: 100,
+      type: WidthType.PERCENTAGE,
+    },
+    borders: {
+      top: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      left: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+    },
+    rows: [
+      // Header row
+      new TableRow({
+        children: [
+          new TableCell({
+            borders: {
+              bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+              right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+            },
+            width: {
+              size: 30,
+              type: WidthType.PERCENTAGE,
+            },
+            children: [
+              new Paragraph({
+                text: "Course Code",
+                alignment: AlignmentType.CENTER,
+                heading: HeadingLevel.HEADING_3,
+              }),
+            ],
+          }),
+          new TableCell({
+            borders: {
+              bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+              right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+            },
+            width: {
+              size: 40,
+              type: WidthType.PERCENTAGE,
+            },
+            children: [
+              new Paragraph({
+                text: "Course Title",
+                alignment: AlignmentType.CENTER,
+                heading: HeadingLevel.HEADING_3,
+              }),
+            ],
+          }),
+          new TableCell({
+            borders: {
+              bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+            },
+            width: {
+              size: 30,
+              type: WidthType.PERCENTAGE,
+            },
+            children: [
+              new Paragraph({
+                text: "MAX MARKS",
+                alignment: AlignmentType.CENTER,
+                heading: HeadingLevel.HEADING_3,
+              }),
+            ],
+          }),
+        ],
+      }),
+      // Values row
+      new TableRow({
+        children: [
+          new TableCell({
+            borders: {
+              bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+              right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+            },
+            children: [
+              new Paragraph({
+                text: courseCode || "ECSCI24202",
+                alignment: AlignmentType.CENTER,
+              }),
+            ],
+          }),
+          new TableCell({
+            borders: {
+              bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+              right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+            },
+            children: [
+              new Paragraph({
+                text: title,
+                alignment: AlignmentType.CENTER,
+              }),
+            ],
+          }),
+          new TableCell({
+            borders: {
+              bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+            },
+            children: [
+              new Paragraph({
+                text: totalMarks.toString(),
+                alignment: AlignmentType.CENTER,
+              }),
+            ],
+          }),
+        ],
+      }),
+      // Duration row
+      new TableRow({
+        children: [
+          new TableCell({
+            borders: {
+              right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+            },
+            children: [
+              new Paragraph({
+                text: "Session",
+                alignment: AlignmentType.CENTER,
+                heading: HeadingLevel.HEADING_3,
+              }),
+            ],
+          }),
+          new TableCell({
+            borders: {
+              right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+            },
+            children: [
+              new Paragraph({
+                text: "",
+                alignment: AlignmentType.CENTER,
+              }),
+            ],
+          }),
+          new TableCell({
+            children: [
+              new Paragraph({
+                text: "Duration",
+                alignment: AlignmentType.LEFT,
+                heading: HeadingLevel.HEADING_3,
+              }),
+              new Paragraph({
+                text: duration,
+                alignment: AlignmentType.RIGHT,
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+  
+  children.push(courseInfoTable);
+  
+  // Course outcomes section - using the instructions
+  children.push(
+    new Paragraph({
+      text: "COURSE OUTCOMES:",
+      heading: HeadingLevel.HEADING_3,
+      spacing: { before: 400, after: 200 },
+    })
+  );
+  
+  // Add instructions as a numbered list
+  const instructionLines = instructions.split('\n');
+  instructionLines.forEach((line, index) => {
+    children.push(
+      new Paragraph({
+        text: `${index + 1}. ${line}`,
+        spacing: { after: 100 },
+      })
+    );
+  });
+  
+  // Instructions to students section
+  children.push(
+    new Paragraph({
+      text: "INSTRUCTION TO THE STUDENTS:",
+      heading: HeadingLevel.HEADING_3,
+      spacing: { before: 400, after: 200 },
+    })
+  );
+  
+  // Standard instructions
+  const standardInstructions = [
+    "Attempt all questions.",
+    "Make suitable assumptions wherever necessary.",
+    "Figures to the right indicate full marks."
   ];
   
+  standardInstructions.forEach((instruction, index) => {
+    children.push(
+      new Paragraph({
+        text: `${index + 1}. ${instruction}`,
+        spacing: { after: 100 },
+      })
+    );
+  });
+  
+  // Bloom's Taxonomy table
+  children.push(
+    new Paragraph({
+      text: "BLOOM'S TAXONOMY [BT]:",
+      heading: HeadingLevel.HEADING_3,
+      spacing: { before: 400, after: 200 },
+    })
+  );
+  
+  const bloomTable = new Table({
+    width: {
+      size: 100,
+      type: WidthType.PERCENTAGE,
+    },
+    borders: {
+      top: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      left: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+      insideVertical: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+    },
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            borders: {
+              bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+              right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+            },
+            children: [new Paragraph({ text: "Remember", alignment: AlignmentType.CENTER })],
+          }),
+          new TableCell({
+            borders: {
+              bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+              right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+            },
+            children: [new Paragraph({ text: "Understand", alignment: AlignmentType.CENTER })],
+          }),
+          new TableCell({
+            borders: {
+              bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+              right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+            },
+            children: [new Paragraph({ text: "Apply", alignment: AlignmentType.CENTER })],
+          }),
+          new TableCell({
+            borders: {
+              bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+              right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+            },
+            children: [new Paragraph({ text: "Analyze", alignment: AlignmentType.CENTER })],
+          }),
+          new TableCell({
+            borders: {
+              bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+              right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+            },
+            children: [new Paragraph({ text: "Evaluate", alignment: AlignmentType.CENTER })],
+          }),
+          new TableCell({
+            borders: {
+              bottom: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+            },
+            children: [new Paragraph({ text: "Create", alignment: AlignmentType.CENTER })],
+          }),
+        ],
+      }),
+      new TableRow({
+        children: [
+          new TableCell({
+            borders: {
+              right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+            },
+            children: [new Paragraph({ text: "R", alignment: AlignmentType.CENTER })],
+          }),
+          new TableCell({
+            borders: {
+              right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+            },
+            children: [new Paragraph({ text: "U", alignment: AlignmentType.CENTER })],
+          }),
+          new TableCell({
+            borders: {
+              right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+            },
+            children: [new Paragraph({ text: "A", alignment: AlignmentType.CENTER })],
+          }),
+          new TableCell({
+            borders: {
+              right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+            },
+            children: [new Paragraph({ text: "N", alignment: AlignmentType.CENTER })],
+          }),
+          new TableCell({
+            borders: {
+              right: { style: BorderStyle.SINGLE, size: 1, color: "000000" },
+            },
+            children: [new Paragraph({ text: "E", alignment: AlignmentType.CENTER })],
+          }),
+          new TableCell({
+            children: [new Paragraph({ text: "C", alignment: AlignmentType.CENTER })],
+          }),
+        ],
+      }),
+    ],
+  });
+  
+  children.push(bloomTable);
+  
+  // Separator before questions
+  children.push(
+    new Paragraph({
+      text: "",
+      spacing: { before: 400, after: 400 },
+      border: {
+        bottom: {
+          color: "000000",
+          space: 1,
+          style: BorderStyle.SINGLE,
+          size: 1,
+        },
+      },
+    })
+  );
+  
   // Questions section
-  const questionsParagraphs = [];
+  children.push(
+    new Paragraph({
+      text: "Questions:",
+      heading: HeadingLevel.HEADING_2,
+      spacing: { after: 200 },
+    })
+  );
   
   // Process each question
   for (let index = 0; index < questions.length; index++) {
@@ -121,7 +411,7 @@ export const downloadQuestionPaper = async (options: QuestionPaperOptions) => {
     const marksText = question.marks ? ` [${question.marks} marks]` : '';
     
     // Add question text
-    questionsParagraphs.push(
+    children.push(
       new Paragraph({
         children: [
           new TextRun({
@@ -137,6 +427,20 @@ export const downloadQuestionPaper = async (options: QuestionPaperOptions) => {
           })
         ],
         spacing: { after: question.image_url ? 100 : 200 },
+      })
+    );
+    
+    // Add a line showing the Bloom's level
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: `Bloom's Level: ${question.bloom_level.toUpperCase()}`,
+            size: 20,
+            color: "666666",
+          })
+        ],
+        spacing: { after: 200 },
       })
     );
     
@@ -169,7 +473,7 @@ export const downloadQuestionPaper = async (options: QuestionPaperOptions) => {
           ],
         });
         
-        questionsParagraphs.push(imageParagraph);
+        children.push(imageParagraph);
       } catch (error) {
         console.error(`Error adding image for question ${questionNumber}:`, error);
         // Continue without the image if there's an error
@@ -182,11 +486,7 @@ export const downloadQuestionPaper = async (options: QuestionPaperOptions) => {
     sections: [
       {
         properties: {},
-        children: [
-          ...headerParagraphs,
-          ...instructionsParagraphs,
-          ...questionsParagraphs
-        ]
+        children: children
       }
     ]
   });
