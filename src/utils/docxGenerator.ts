@@ -33,12 +33,12 @@ export const downloadQuestionPaper = async (options: QuestionPaperOptions) => {
         spacing: { after: 200 },
         children: [
           new ImageRun({
-            data: Buffer.from(arrayBuffer),
+            data: arrayBuffer,
             transformation: {
               width: 100,
               height: 100,
             },
-            type: 'png', // Specify the image type
+            type: "png" as "png" | "jpg" | "gif" | "bmp" | "svg", // Type assertion for valid image types
           }),
         ],
       });
@@ -148,9 +148,9 @@ export const downloadQuestionPaper = async (options: QuestionPaperOptions) => {
         const arrayBuffer = await blob.arrayBuffer();
         
         // Determine image type from URL or default to png
-        let imageType = 'png';
+        let imageType: "png" | "jpg" | "gif" | "bmp" | "svg" = "png";
         if (question.image_url.toLowerCase().endsWith('.jpg') || question.image_url.toLowerCase().endsWith('.jpeg')) {
-          imageType = 'jpeg';
+          imageType = "jpg";
         }
         
         // Create image paragraph
@@ -159,12 +159,12 @@ export const downloadQuestionPaper = async (options: QuestionPaperOptions) => {
           spacing: { after: 200 },
           children: [
             new ImageRun({
-              data: Buffer.from(arrayBuffer),
+              data: arrayBuffer,
               transformation: {
                 width: 300,
                 height: 200,
               },
-              type: imageType, // Specify the image type
+              type: imageType,
             }),
           ],
         });
