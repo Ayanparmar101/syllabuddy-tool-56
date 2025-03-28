@@ -41,6 +41,36 @@ export const useQuestionDatabase = () => {
     }
   }, []);
 
+  const uploadImage = async (file: File): Promise<string | null> => {
+    try {
+      // Create a unique file name
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${uuidv4()}.${fileExt}`;
+      const filePath = fileName;
+      
+      console.log('Uploading image:', fileName, 'to bucket: question_images');
+      
+      // Upload the file to Supabase storage
+      const { data, error } = await supabase.storage
+        .from('question_images')
+        .upload(filePath, file);
+      
+      if (error) throw error;
+      
+      console.log('Image uploaded successfully:', data);
+      
+      // Get the public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('question_images')
+        .getPublicUrl(filePath);
+      
+      return publicUrlData.publicUrl;
+    } catch (err) {
+      console.error('Error uploading image:', err);
+      throw err;
+    }
+  };
+
   const addQuestion = async (questionData: QuestionInput) => {
     try {
       const { data, error } = await supabase
@@ -116,6 +146,7 @@ export const useQuestionDatabase = () => {
     fetchQuestions,
     addQuestion,
     updateQuestion,
-    deleteQuestion
+    deleteQuestion,
+    uploadImage
   };
 };

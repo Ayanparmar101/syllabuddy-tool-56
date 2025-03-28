@@ -26,7 +26,8 @@ const QuestionsPage = () => {
     fetchQuestions, 
     addQuestion, 
     updateQuestion, 
-    deleteQuestion 
+    deleteQuestion,
+    uploadImage 
   } = useQuestionDatabase();
   
   const [editingQuestion, setEditingQuestion] = useState<any>(null);
@@ -36,54 +37,49 @@ const QuestionsPage = () => {
     fetchQuestions();
   }, [fetchQuestions]);
 
-  const handleAddQuestion = (question: {
+  const handleAddQuestion = async (question: {
     id: string;
     text: string;
     bloomLevel: BloomLevelType;
     marks?: number;
     imageUrl?: string;
   }) => {
-    if (editingQuestion) {
-      // Update existing question
-      updateQuestion({
-        id: editingQuestion.id,
-        text: question.text,
-        bloom_level: question.bloomLevel,
-        marks: question.marks,
-        image_url: question.imageUrl
-      }).then(() => {
+    try {
+      if (editingQuestion) {
+        // Update existing question
+        await updateQuestion({
+          id: editingQuestion.id,
+          text: question.text,
+          bloom_level: question.bloomLevel,
+          marks: question.marks,
+          image_url: question.imageUrl
+        });
+      
         setEditingQuestion(null);
         toast({
           title: "Question updated",
           description: "The question has been successfully updated."
         });
-      }).catch(err => {
-        console.error('Error updating question:', err);
-        toast({
-          title: "Error",
-          description: "Failed to update question",
-          variant: "destructive"
+      } else {
+        // Add new question
+        await addQuestion({
+          text: question.text,
+          bloom_level: question.bloomLevel,
+          marks: question.marks,
+          image_url: question.imageUrl
         });
-      });
-    } else {
-      // Add new question
-      addQuestion({
-        text: question.text,
-        bloom_level: question.bloomLevel,
-        marks: question.marks,
-        image_url: question.imageUrl
-      }).then(() => {
+      
         toast({
           title: "Question added",
           description: "The question has been added to your question bank."
         });
-      }).catch(err => {
-        console.error('Error adding question:', err);
-        toast({
-          title: "Error",
-          description: "Failed to add question",
-          variant: "destructive"
-        });
+      }
+    } catch (err) {
+      console.error('Error handling question:', err);
+      toast({
+        title: "Error",
+        description: "Failed to save question",
+        variant: "destructive"
       });
     }
   };

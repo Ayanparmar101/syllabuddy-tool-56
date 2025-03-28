@@ -8,8 +8,8 @@ import VerbSelector from './VerbSelector';
 import BloomLevel from './BloomLevel';
 import { bloomVerbsData } from '@/data/bloomVerbs';
 import { X, CheckCircle, AlertCircle, Image, Upload, Loader2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
+import { useQuestionDatabase } from '@/hooks/useQuestionDatabase';
 
 type BloomLevelType = 'remember' | 'understand' | 'apply' | 'analyze' | 'evaluate' | 'create';
 
@@ -39,6 +39,9 @@ const QuestionBuilder: React.FC<QuestionBuilderProps> = ({ onAddQuestion }) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  
+  // Get the uploadImage function from our hook
+  const { uploadImage } = useQuestionDatabase();
 
   // Reset the form when the level changes
   useEffect(() => {
@@ -106,28 +109,16 @@ const QuestionBuilder: React.FC<QuestionBuilderProps> = ({ onAddQuestion }) => {
     setImageUrl(null);
   };
 
-  const uploadImage = async (): Promise<string | null> => {
+  const handleImageUpload = async (): Promise<string | null> => {
     if (!selectedImage) return null;
     
     setUploadingImage(true);
     try {
-      const fileExt = selectedImage.name.split('.').pop();
-      const filePath = `${uuidv4()}.${fileExt}`;
-      
-      const { data, error } = await supabase.storage
-        .from('question_images')
-        .upload(filePath, selectedImage);
-      
-      if (error) {
-        throw error;
-      }
-      
-      // Get the public URL
-      const { data: publicUrlData } = supabase.storage
-        .from('question_images')
-        .getPublicUrl(filePath);
-      
-      return publicUrlData.publicUrl;
+      console.log('Starting image upload...');
+      const url = await uploadImage(selectedImage);
+      console.log('Image uploaded successfully, URL:', url);
+      setImageUrl(url);
+      return url;
     } catch (error) {
       console.error('Error uploading image:', error);
       setNotification({
@@ -160,9 +151,18 @@ const QuestionBuilder: React.FC<QuestionBuilderProps> = ({ onAddQuestion }) => {
     // First upload image if one is selected
     let uploadedImageUrl = null;
     if (selectedImage) {
-      uploadedImageUrl = await uploadImage();
-      if (!uploadedImageUrl && selectedImage) {
-        // Image upload failed but was required
+      try {
+        uploadedImageUrl = await handleImageUpload();
+        if (!uploadedImageUrl && selectedImage) {
+          // Image upload failed but was required
+          return;
+        }
+      } catch (err) {
+        console.error('Image upload error:', err);
+        setNotification({
+          type: 'warning',
+          message: 'Failed to upload image. Please try again.'
+        });
         return;
       }
     }
