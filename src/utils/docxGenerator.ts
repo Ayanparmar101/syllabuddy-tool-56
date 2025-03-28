@@ -38,7 +38,7 @@ export const downloadQuestionPaper = async (options: QuestionPaperOptions) => {
               width: 100,
               height: 100,
             },
-            type: "png" as "png" | "jpg" | "gif" | "bmp" | "svg", // Type assertion for valid image types
+            type: "png",
           }),
         ],
       });
@@ -147,8 +147,8 @@ export const downloadQuestionPaper = async (options: QuestionPaperOptions) => {
         const blob = await response.blob();
         const arrayBuffer = await blob.arrayBuffer();
         
-        // Determine image type from URL or default to png
-        let imageType: "png" | "jpg" | "gif" | "bmp" | "svg" = "png";
+        // Determine image type from URL
+        let imageType: "png" | "jpg" = "png";
         if (question.image_url.toLowerCase().endsWith('.jpg') || question.image_url.toLowerCase().endsWith('.jpeg')) {
           imageType = "jpg";
         }
