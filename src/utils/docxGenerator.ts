@@ -38,6 +38,7 @@ export const downloadQuestionPaper = async (options: QuestionPaperOptions) => {
               width: 100,
               height: 100,
             },
+            type: 'png', // Specify the image type
           }),
         ],
       });
@@ -146,6 +147,12 @@ export const downloadQuestionPaper = async (options: QuestionPaperOptions) => {
         const blob = await response.blob();
         const arrayBuffer = await blob.arrayBuffer();
         
+        // Determine image type from URL or default to png
+        let imageType = 'png';
+        if (question.image_url.toLowerCase().endsWith('.jpg') || question.image_url.toLowerCase().endsWith('.jpeg')) {
+          imageType = 'jpeg';
+        }
+        
         // Create image paragraph
         const imageParagraph = new Paragraph({
           alignment: AlignmentType.CENTER,
@@ -157,6 +164,7 @@ export const downloadQuestionPaper = async (options: QuestionPaperOptions) => {
                 width: 300,
                 height: 200,
               },
+              type: imageType, // Specify the image type
             }),
           ],
         });
