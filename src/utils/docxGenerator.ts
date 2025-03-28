@@ -10,10 +10,12 @@ interface QuestionPaperOptions {
   instructions: string;
   questions: QuestionItem[];
   totalMarks: number;
+  courseCode?: string;
+  universityLogo?: string;
 }
 
 export const downloadQuestionPaper = async (options: QuestionPaperOptions) => {
-  const { title, subject, duration, instructions, questions, totalMarks } = options;
+  const { title, subject, duration, instructions, questions, totalMarks, courseCode, universityLogo } = options;
   
   // Create header section
   const headerParagraphs = [
@@ -29,6 +31,16 @@ export const downloadQuestionPaper = async (options: QuestionPaperOptions) => {
     headerParagraphs.push(
       new Paragraph({
         text: `Subject: ${subject}`,
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 100 }
+      })
+    );
+  }
+  
+  if (courseCode) {
+    headerParagraphs.push(
+      new Paragraph({
+        text: `Course Code: ${courseCode}`,
         alignment: AlignmentType.CENTER,
         spacing: { after: 100 }
       })
