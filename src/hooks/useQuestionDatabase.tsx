@@ -10,6 +10,7 @@ export type QuestionItem = {
   marks?: number;
   created_at?: string;
   keywords?: string[];
+  image_url?: string | null;
 };
 
 type QuestionInput = Omit<QuestionItem, 'id' | 'created_at'>;
@@ -71,6 +72,7 @@ export const useQuestionDatabase = () => {
           text: questionData.text,
           bloom_level: questionData.bloom_level,
           marks: questionData.marks,
+          image_url: questionData.image_url,
           updated_at: new Date().toISOString(),
         })
         .eq('id', questionData.id)

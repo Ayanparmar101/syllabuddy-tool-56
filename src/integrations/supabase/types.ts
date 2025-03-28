@@ -42,6 +42,7 @@ export type Database = {
           created_at: string | null
           document_id: string | null
           id: string
+          image_url: string | null
           keywords: string[] | null
           marks: number | null
           text: string
@@ -52,6 +53,7 @@ export type Database = {
           created_at?: string | null
           document_id?: string | null
           id?: string
+          image_url?: string | null
           keywords?: string[] | null
           marks?: number | null
           text: string
@@ -62,6 +64,7 @@ export type Database = {
           created_at?: string | null
           document_id?: string | null
           id?: string
+          image_url?: string | null
           keywords?: string[] | null
           marks?: number | null
           text?: string

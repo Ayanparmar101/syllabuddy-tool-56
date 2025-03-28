@@ -41,6 +41,7 @@ const QuestionsPage = () => {
     text: string;
     bloomLevel: BloomLevelType;
     marks?: number;
+    imageUrl?: string;
   }) => {
     if (editingQuestion) {
       // Update existing question
@@ -48,7 +49,8 @@ const QuestionsPage = () => {
         id: editingQuestion.id,
         text: question.text,
         bloom_level: question.bloomLevel,
-        marks: question.marks
+        marks: question.marks,
+        image_url: question.imageUrl
       }).then(() => {
         setEditingQuestion(null);
         toast({
@@ -68,7 +70,8 @@ const QuestionsPage = () => {
       addQuestion({
         text: question.text,
         bloom_level: question.bloomLevel,
-        marks: question.marks
+        marks: question.marks,
+        image_url: question.imageUrl
       }).then(() => {
         toast({
           title: "Question added",
@@ -107,7 +110,8 @@ const QuestionsPage = () => {
       id: question.id,
       text: question.text,
       bloomLevel: question.bloomLevel,
-      marks: question.marks
+      marks: question.marks,
+      imageUrl: question.imageUrl
     });
   };
 
@@ -131,7 +135,8 @@ const QuestionsPage = () => {
               id: q.id,
               text: q.text,
               bloomLevel: q.bloom_level as BloomLevelType,
-              marks: q.marks
+              marks: q.marks,
+              imageUrl: q.image_url
             }))} 
             onDeleteQuestion={handleDeleteQuestion}
             onEditQuestion={handleEditQuestion}

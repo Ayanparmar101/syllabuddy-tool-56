@@ -2,7 +2,7 @@
 import React from 'react';
 import BloomLevel from './BloomLevel';
 import { Button } from '@/components/ui/button';
-import { Edit2, Trash2 } from 'lucide-react';
+import { Edit2, Trash2, Image } from 'lucide-react';
 
 type BloomLevelType = 'remember' | 'understand' | 'apply' | 'analyze' | 'evaluate' | 'create';
 
@@ -11,6 +11,7 @@ type Question = {
   text: string;
   bloomLevel: BloomLevelType;
   marks?: number;
+  imageUrl?: string | null;
 };
 
 type QuestionBankProps = {
@@ -92,10 +93,24 @@ const QuestionBank: React.FC<QuestionBankProps> = ({
                     <div className="flex justify-between">
                       <div className="flex-1 mr-4">
                         <p className="font-medium">{question.text}</p>
+                        {question.imageUrl && (
+                          <div className="mt-3 relative rounded-md overflow-hidden border border-border">
+                            <img 
+                              src={question.imageUrl}
+                              alt="Question image" 
+                              className="max-h-48 max-w-full object-contain"
+                            />
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-start space-x-2">
-                        <div className="bloom-tag bg-secondary text-foreground">
-                          {question.marks || 1} {(question.marks || 1) === 1 ? 'mark' : 'marks'}
+                        <div className="flex items-center space-x-2">
+                          {question.imageUrl && (
+                            <Image className="h-4 w-4 text-blue-500" />
+                          )}
+                          <div className="bloom-tag bg-secondary text-foreground">
+                            {question.marks || 1} {(question.marks || 1) === 1 ? 'mark' : 'marks'}
+                          </div>
                         </div>
                         <Button 
                           variant="ghost" 
